@@ -1,4 +1,4 @@
-# printer-admin
+# printer-ledger
 
 A single-binary Go TUI ledger for a one-person 3D printing side business. Read `CONTEXT.md` for the
 domain glossary before naming anything.

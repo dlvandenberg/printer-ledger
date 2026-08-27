@@ -20,7 +20,7 @@ Margin is `Design.marginPct`, which is non-null and seeded from `Settings.defaul
 at creation (ADR-0014).
 
 Suggested price appears on the **Design screen only**, computed from its per-copy estimates
-(ADR-0014). A Print shows cost and per-unit cost, never a price.
+(ADR-0014). A Print shows cost and per-copy cost, never a price.
 
 ## Consequences
 

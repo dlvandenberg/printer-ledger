@@ -7,7 +7,7 @@
 A single print can draw from more than one spool: a colour swap, a multi-material job, or — most
 commonly — a spool running out mid-print. If a print referenced exactly one spool, a mid-print swap
 would have to be recorded as two separate prints, which is a lie about what was printed and breaks
-per-unit cost.
+per-copy cost.
 
 Separately, the spool `remaining >= 0` invariant (ADR-0003) needs enforcing somewhere.
 

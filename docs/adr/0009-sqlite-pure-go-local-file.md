@@ -13,7 +13,7 @@ spool remaining needs joins across usage rows.
 SQLite through `modernc.org/sqlite` — a pure-Go implementation, so no cgo and no C toolchain for
 cross-compilation.
 
-Database path defaults to `./printer-admin.db`, overridable with a `-db` flag. `.gitignore` already
+Database path defaults to `./printer-ledger.db`, overridable with a `-db` flag. `.gitignore` already
 excludes `*.db`, `*.db-shm`, `*.db-wal`.
 
 ## Consequences

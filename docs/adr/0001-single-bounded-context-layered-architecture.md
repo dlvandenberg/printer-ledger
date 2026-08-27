@@ -4,7 +4,7 @@
 
 ## Context
 
-printer-admin tracks filament, prints, and sales for one operator with one printer. A domain-driven
+printer-ledger tracks filament, prints, and sales for one operator with one printer. A domain-driven
 approach invites context boundaries (inventory vs. production vs. sales), but the whole model fits
 in one head and every aggregate is read together on nearly every screen.
 

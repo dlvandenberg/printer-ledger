@@ -32,4 +32,4 @@ A `Print` of quantity N creates N `Unit` records. Each Unit has status
 Once a `Print` was fixed to a single `Design`, a Unit row carried no fact distinguishing one copy
 from another. ADR-0013 replaces the Unit table with counts on the Print. The parts of this ADR that
 survive: failures are still not a print-level status field, gifted and scrapped still keep their
-share of cost, and per-unit cost still divides across all copies.
+share of cost, and cost per copy still divides across all copies.

@@ -1,7 +1,6 @@
-/printer-admin
+/printer-ledger
 *.db
 *.db-shm
 *.db-wal
-printer-admin-*.txt
+printer-ledger-*.txt
 
-.scratch/**

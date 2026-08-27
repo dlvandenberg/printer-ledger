@@ -7,7 +7,7 @@
 A print that fails at layer three consumes real filament and real machine time but produces no
 objects. Under ADR-0005 failures were recorded by scrapping units, which for a zero-yield run
 means creating N records for objects that never existed. Allowing `quantity: 0` instead makes
-`unitCost = jobCost / 0` undefined and puts a zero-division path into every consumer of unit cost.
+`costPerCopy = jobCost / 0` undefined and puts a zero-division path into every consumer of cost per copy.
 
 ## Decision
 
@@ -18,8 +18,8 @@ A *partly* failed plate is still a Print: `scrappedCount` records the ruined cop
 
 ## Considered Options
 
-Allowing `quantity: 0` Prints, guarding the division and showing "—" for unit cost. Rejected for
-the branch it adds everywhere unit cost is consumed, against a simplicity goal.
+Allowing `quantity: 0` Prints, guarding the division and showing "—" for cost per copy. Rejected for
+the branch it adds everywhere cost per copy is consumed, against a simplicity goal.
 
 ## Consequences
 

@@ -11,7 +11,7 @@ whatever was actually charged.
 ## Decision
 
 `Settings.minMarginPct` defines the floor. When a Sale is entered with
-`priceCents < unitCost × (1 + minMarginPct)`, where `unitCost` is that of the **Print** the copy
+`priceCents < costPerCopy × (1 + minMarginPct)`, where `costPerCopy` is that of the **Print** the copy
 came from, the form shows an inline warning. Recording proceeds with no extra keystroke.
 
 ## Consequences

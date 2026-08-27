@@ -15,7 +15,7 @@ cost, so you know your floor.
 ## Decision
 
 Suggested Price appears on the **Design** only, computed from its per-copy estimates. A `Print`
-shows the cost breakdown and `unitCost`, and no price.
+shows the cost breakdown and `costPerCopy`, and no price.
 
 Margin is `Design.marginPct`: non-null, seeded from `Settings.defaultMarginPct` when the Design is
 created, edited freely thereafter. The nullable `marginOverridePct` and its read-time fallback are
@@ -37,4 +37,4 @@ gone.
   shows cost against the Design's price, and the operator decides.
 - Raising `Settings.defaultMarginPct` re-prices nothing that already exists. Existing Designs keep
   their margin until individually edited — predictable, but a global raise is manual.
-- `unitCost` divides across all copies including scrapped ones, unchanged.
+- `costPerCopy` divides across all copies including scrapped ones, unchanged.

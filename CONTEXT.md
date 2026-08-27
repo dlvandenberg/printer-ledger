@@ -1,4 +1,4 @@
-# printer-admin — Domain Context
+# printer-ledger — Domain Context
 
 A single-user TUI ledger for a 3D printing side business. Tracks filament stock, prints, and
 sales; computes what a print actually cost and what a design should sell for.
@@ -100,6 +100,31 @@ A run that produced nothing — a print that failed at layer three — is record
 **Print**. The filament is genuinely gone; the machine hours are absorbed by
 `machineHourlyRateCents`.
 
+### Spool Ledger
+
+A **Spool** together with the event totals its `remaining` derives from. A read model, not a stored
+record — nothing in the database corresponds to it.
+
+| Field | Meaning |
+|---|---|
+| `spool` | The **Spool** itself |
+| `usedGrams` | `Σ` grams over every **Filament Usage** row referencing it |
+| `adjustedGrams` | `Σ deltaGrams` over every **Spool Adjustment** on it |
+
+Derived:
+
+- `remaining = spool.initialGrams − usedGrams + adjustedGrams`
+- `remainingValue = remaining × spool.costPerGram`
+- state: `active` / `empty`
+
+It exists so that the derivation in ADR-0003 lives in the domain while the two sums are fetched by
+the store. The same expression answers two questions that must never disagree: what the Spools list
+displays, and whether a **Filament Usage** row would overdraw the spool. `remaining >= 0` therefore
+has one definition rather than one per caller.
+
+Explaining a remaining figure to the operator — the initial / printed / adjusted breakdown on the
+spool detail screen — needs the rows themselves, not these totals, and is a separate query.
+
 ### Design
 
 A printable model, and the only place a price is decided.
@@ -146,7 +171,7 @@ Rounded **up** to the nearest €0.50 — always up, never nearest. Shown **only
 Other **Filament Type** rows show cost alone, so the effect of a material switch is visible
 without implying a second price.
 
-A **Print** shows cost and per-unit cost, never a suggested price. Once objects exist the
+A **Print** shows cost and per-copy cost, never a suggested price. Once objects exist the
 question is what they cost you, and the price was already decided on the Design.
 
 ### Print
@@ -190,10 +215,20 @@ is what keeps the `remaining >= 0` invariant true and forces swaps to be recorde
 
 All rows on one Print must be Spools of the same **Filament Type**.
 
+### Copy
+
+One physical printed object, produced by a **Print**. A Print of `quantity` 4 produces four Copies.
+
+Copies are **counted, never individually recorded**: all Copies of one Design from one Print are
+interchangeable, so there is no fact that distinguishes one from another and nothing to identify.
+What is tracked is how many are in each state — see **Stock**.
+
+Avoid: "Unit" (there is no such record), "item", "piece".
+
 ### Stock
 
-What became of a **Print**'s copies. Counted, not individually tracked — copies of one Design
-from one Print are interchangeable, so there is nothing to tell them apart.
+What became of a **Print**'s **Copies**. Scoped to one Print — the whole-business view of
+everything owned, filament included, is the **Inventory** block on the report.
 
 ```
 soldCount  = number of Sales referencing this Print   (derived)
@@ -205,20 +240,25 @@ stops `quantity` being edited below what has already been accounted for.
 
 - `gifted` left the building; `kept` is yours and might still be sold later; `scrapped` is ruined.
 - All three keep their share of job cost — the money was really spent — but never contribute
-  revenue or units-sold. Reporting shows them on their own line.
+  revenue or copies-sold. Reporting shows them on their own line.
 - A partly failed plate is recorded by raising `scrappedCount`. There is no separate
   failure concept and no print-level status field.
 
 A **Print** cannot be deleted while any copy is sold, gifted, kept or scrapped.
 
-Avoid: "Unit" — there is no such record.
+### Inventory
+
+Everything owned right now, across both kinds of thing: unsold **Copies** with their cost value,
+and **Spool** remaining grams with their value. Broader than **Stock**, which is per-Print.
+
+Always on screen in the report, independent of the selected period.
 
 ### Sale
 
 `{ printID, priceCents, date }`. The Print identifies which batch the copy came from, and
 selling from it is what decrements `available`.
 
-Warns — never blocks — when `priceCents < unitCost × (1 + Settings.minMarginPct)`. The ledger's
+Warns — never blocks — when `priceCents < costPerCopy × (1 + Settings.minMarginPct)`. The ledger's
 job is to record what was actually charged, haggling included; a refused sale would simply go
 unrecorded.
 
@@ -233,10 +273,10 @@ filament  = Σ over usages: grams × usage.costPerGramCents
 energy    = hours × kwhPerHour × kwhPriceCents
 overhead  = hours × machineHourlyRateCents
 jobCost   = filament + energy + overhead
-unitCost  = jobCost / quantity
+costPerCopy  = jobCost / quantity
 ```
 
-`unitCost` divides across **all** copies including scrapped ones: every copy cost the same to
+`costPerCopy` divides across **all** copies including scrapped ones: every copy cost the same to
 make, and the scrap shows up as its own reporting line rather than by inflating the survivors.
 
 Worked example — spool PLA €22.00 / 1000g; print 120g, 5h30m, quantity 2;
@@ -247,7 +287,7 @@ filament  120 × 2.2c/g              = 264c
 energy    5.5 × 0.09 × 28c          =  14c
 overhead  5.5 × 35c                 = 193c
 jobCost                             = 471c   (€4.71)
-unitCost  471 / 2                   = 236c   (€2.36)
+costPerCopy  471 / 2                   = 236c   (€2.36)
 ```
 
 The same design quoted on the Design screen — 60g and 2h45m per copy, margin 50%:
@@ -264,7 +304,7 @@ suggested 235 × 1.5 = 353c          → €4.00
 
 Two different questions, deliberately both reported and clearly labelled:
 
-- **Per-period profit** matches cost to revenue: cost is the `unitCost` of copies *sold* in the
+- **Per-period profit** matches cost to revenue: cost is the `costPerCopy` of copies *sold* in the
   period, so margin % answers "is my pricing working".
 - **Break-Even** is cash-based and all-time:
   `revenue − (printerPurchaseCostCents + all spool spend + energy spend)`.
@@ -281,7 +321,7 @@ Per period: revenue, cost of copies sold, profit, margin %, copies sold, a separ
 cost line for Prints made in the period, a gifted/kept/scrapped line, and Designs ranked by
 profit on the same matched basis.
 
-Always visible: **Break-Even** progress, plus a stock block — unsold copies and their cost value,
+Always visible: **Break-Even** progress, plus a Inventory block — unsold copies and their cost value,
 Spool remaining grams and value.
 
 No custom date ranges, no charts.
@@ -289,15 +329,20 @@ No custom date ranges, no charts.
 ## Architecture
 
 ```
-internal/domain   pure Go, no dependencies. Cost math and invariants. Unit-tested.
+internal/domain   pure Go, no dependencies. Cost math and invariants.
                   Owns the repository interfaces it needs.
 internal/store    SQLite (modernc.org/sqlite — pure Go, no cgo). Implements the repositories.
-internal/tui      bubbletea + bubbles + lipgloss.
+internal/app      One method per use case. Owns transaction boundaries. The test seam.
+internal/tui      bubbletea + bubbles + lipgloss. A renderer over internal/app.
 ```
 
-The domain is testable without a database or a terminal; that is the point of the split.
+Dependencies point inward: `tui → app → domain ← store`. See ADR-0001.
+
+The domain is testable without a database or a terminal; that is the point of the split. Tests
+nonetheless drive `internal/app` against a real SQLite database, so cost math is verified wired to
+persistence rather than apart from it.
 
 Tabs: `Spools │ Designs │ Prints │ Sales │ Report │ Settings`.
 Keys: `a` add, `e` edit, `enter` detail, `d` delete (with confirm), `tab`/`shift-tab` switch.
 
-Database: `./printer-admin.db`, overridable with `-db`.
+Database: `./printer-ledger.db`, overridable with `-db`.
