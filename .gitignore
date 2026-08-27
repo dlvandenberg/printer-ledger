@@ -1,0 +1,7 @@
+/printer-admin
+*.db
+*.db-shm
+*.db-wal
+printer-admin-*.txt
+
+.scratch/**
