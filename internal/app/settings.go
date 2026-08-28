@@ -101,11 +101,7 @@ func parseUpdateSettings(cmd UpdateSettingsCmd, current domain.Settings) (domain
 	}
 
 	for _, filamentType := range domain.FilamentTypes() {
-		typed, ok := cmd.PowerRates[filamentType]
-		if !ok {
-			continue
-		}
-		if rate, err := domain.ParseKwhPerHour(typed); err != nil {
+		if rate, err := domain.ParseKwhPerHour(cmd.PowerRates[filamentType]); err != nil {
 			errs.Add(domain.FieldPowerRate(filamentType), err.Error())
 		} else {
 			settings = settings.WithPowerRate(filamentType, rate)

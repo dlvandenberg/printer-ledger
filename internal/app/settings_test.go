@@ -225,6 +225,7 @@ func TestUpdateSettingsValidation(t *testing.T) {
 		{"malformed power rate", func(c *app.UpdateSettingsCmd) { c.PowerRates[domain.PLA] = "a lot" }, domain.FieldPowerRate(domain.PLA)},
 		{"zero power rate", func(c *app.UpdateSettingsCmd) { c.PowerRates[domain.PETG] = "0" }, domain.FieldPowerRate(domain.PETG)},
 		{"negative power rate", func(c *app.UpdateSettingsCmd) { c.PowerRates[domain.PLAPlus] = "-0.1" }, domain.FieldPowerRate(domain.PLAPlus)},
+		{"omitted power rate", func(c *app.UpdateSettingsCmd) { delete(c.PowerRates, domain.PETG) }, domain.FieldPowerRate(domain.PETG)},
 	}
 
 	for _, tc := range tests {
