@@ -42,7 +42,7 @@ func (m *spoolsModel) reload() error {
 
 func (m spoolsModel) capturesInput() bool { return m.form != nil }
 
-func (m spoolsModel) update(msg tea.KeyMsg) (spoolsModel, tea.Cmd) {
+func (m spoolsModel) update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	if m.form != nil {
 		return m.updateForm(msg)
 	}
@@ -63,7 +63,7 @@ func (m spoolsModel) update(msg tea.KeyMsg) (spoolsModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m spoolsModel) updateForm(msg tea.KeyMsg) (spoolsModel, tea.Cmd) {
+func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.form = nil
@@ -129,7 +129,7 @@ func (m spoolsModel) help() string {
 	if m.form != nil {
 		return "tab/shift-tab next field · left/right filament type · enter save · esc cancel · ctrl+c quit"
 	}
-	return "a add · up/down move · tab/shift-tab switch tabs · q quit"
+	return "a add · up/down move · " + globalHelp
 }
 
 func truncate(s string, width int) string {

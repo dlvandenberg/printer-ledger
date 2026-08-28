@@ -11,27 +11,9 @@ import (
 
 const currency = "€"
 
-type tab int
-
-const (
-	tabSpools tab = iota
-	tabDesigns
-	tabPrints
-	tabSales
-	tabReport
-	tabSettings
-)
-
-var tabNames = map[tab]string{
-	tabSpools:   "Spools",
-	tabDesigns:  "Designs",
-	tabPrints:   "Prints",
-	tabSales:    "Sales",
-	tabReport:   "Report",
-	tabSettings: "Settings",
-}
-
-var tabOrder = []tab{tabSpools, tabDesigns, tabPrints, tabSales, tabReport, tabSettings}
+// globalHelp lists the keys the shell owns. A tab appends its own keys in front
+// of it.
+const globalHelp = "tab/shift-tab switch tabs · q quit"
 
 var (
 	activeTabStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15")).Background(lipgloss.Color("62")).Padding(0, 1)
@@ -43,8 +25,8 @@ var (
 )
 
 type Model struct {
-	active tab
-	spools spoolsModel
+	tabs   []namedTab
+	active int
 	width  int
 }
 
@@ -53,7 +35,15 @@ func Run(a *app.App) error {
 	if err != nil {
 		return err
 	}
-	_, err = tea.NewProgram(Model{spools: spools}, tea.WithAltScreen()).Run()
+	m := Model{tabs: []namedTab{
+		{name: "Spools", model: spools},
+		newPlaceholder("Designs"),
+		newPlaceholder("Prints"),
+		newPlaceholder("Sales"),
+		newPlaceholder("Report"),
+		newPlaceholder("Settings"),
+	}}
+	_, err = tea.NewProgram(m, tea.WithAltScreen()).Run()
 	return err
 }
 
@@ -66,71 +56,62 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		// Checked before the capture branch: an open form swallows every other
-		// key, and the operator must always be able to quit.
+		// Checked before the capture branch: a capturing tab swallows every
+		// other key, and the operator must always be able to quit.
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
 
-		if m.active == tabSpools && m.spools.capturesInput() {
-			spools, cmd := m.spools.update(msg)
-			m.spools = spools
-			return m, cmd
+		if !m.current().capturesInput() {
+			switch msg.String() {
+			case "q":
+				return m, tea.Quit
+			case "tab":
+				m.active = (m.active + 1) % len(m.tabs)
+				return m, nil
+			case "shift+tab":
+				m.active = (m.active + len(m.tabs) - 1) % len(m.tabs)
+				return m, nil
+			}
 		}
 
-		switch msg.String() {
-		case "q":
-			return m, tea.Quit
-		case "tab":
-			m.active = tabOrder[(int(m.active)+1)%len(tabOrder)]
-			return m, nil
-		case "shift+tab":
-			m.active = tabOrder[(int(m.active)+len(tabOrder)-1)%len(tabOrder)]
-			return m, nil
-		}
-
-		if m.active == tabSpools {
-			spools, cmd := m.spools.update(msg)
-			m.spools = spools
-			return m, cmd
-		}
+		return m.routeKey(msg)
 	}
 	return m, nil
 }
+
+// routeKey hands the key to the active tab and puts the tab it returns back in
+// place. The slice is cloned so the returned Model does not share its backing
+// array with the caller's.
+func (m Model) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	updated, cmd := m.current().update(msg)
+	tabs := make([]namedTab, len(m.tabs))
+	copy(tabs, m.tabs)
+	tabs[m.active].model = updated
+	m.tabs = tabs
+	return m, cmd
+}
+
+func (m Model) current() tabModel { return m.tabs[m.active].model }
 
 func (m Model) View() string {
 	var b strings.Builder
 	b.WriteString(m.tabBar())
 	b.WriteString("\n\n")
-	b.WriteString(m.body())
+	b.WriteString(m.current().view())
 	b.WriteString("\n\n")
-	b.WriteString(helpStyle.Render(m.help()))
+	b.WriteString(helpStyle.Render(m.current().help()))
 	return b.String()
 }
 
 func (m Model) tabBar() string {
-	rendered := make([]string, 0, len(tabOrder))
-	for _, t := range tabOrder {
+	rendered := make([]string, 0, len(m.tabs))
+	for i, t := range m.tabs {
 		style := inactiveTabStyle
-		if t == m.active {
+		if i == m.active {
 			style = activeTabStyle
 		}
-		rendered = append(rendered, style.Render(tabNames[t]))
+		rendered = append(rendered, style.Render(t.name))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, rendered...)
-}
-
-func (m Model) body() string {
-	if m.active == tabSpools {
-		return m.spools.view()
-	}
-	return titleStyle.Render(tabNames[m.active]) + "\n" +
-		placeholderStyle.Render("Nothing here yet.")
-}
-
-func (m Model) help() string {
-	if m.active == tabSpools {
-		return m.spools.help()
-	}
-	return "tab/shift-tab switch tabs · q quit"
 }

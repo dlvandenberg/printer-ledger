@@ -14,10 +14,10 @@ Six adapters land here, so the seam is real rather than hypothetical.
 
 **Blocked by:** None (can start immediately; independent of 01 and 02).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] The shell routes update, view and help to the active tab without branching on tab identity
-- [ ] Each of the six tabs is an adapter satisfying one interface; the placeholders are the smallest possible ones
-- [ ] ctrl+c quits even while a form is capturing input
-- [ ] q, tab and shift-tab behave as they do today when no form is open
-- [ ] Adding a spool from the Spools tab still works end to end
+- [x] The shell routes update, view and help to the active tab without branching on tab identity
+- [x] Each of the six tabs is an adapter satisfying one interface; the placeholders are the smallest possible ones
+- [x] ctrl+c quits even while a form is capturing input
+- [x] q, tab and shift-tab behave as they do today when no form is open
+- [x] Adding a spool from the Spools tab still works end to end
