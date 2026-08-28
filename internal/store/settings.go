@@ -9,19 +9,16 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 )
 
-const settingsQuery = `
-SELECT kwh_price_cents, machine_hourly_rate_cents, printer_purchase_cost_cents,
-       default_margin_hundredths, min_margin_hundredths
-FROM settings
-WHERE id = 1`
-
 var _ domain.SettingsRepository = &Store{}
 
 func (s *Store) Settings(ctx context.Context) (domain.Settings, error) {
-	var settings domain.Settings
-	err := s.q().QueryRowContext(ctx, settingsQuery).Scan(
-		&settings.KwhPrice, &settings.MachineHourlyRate, &settings.PrinterPurchaseCost,
-		&settings.DefaultMargin, &settings.MinMargin)
+	row := s.q().QueryRowContext(ctx, `
+SELECT kwh_price_cents, machine_hourly_rate_cents, printer_purchase_cost_cents,
+       default_margin_hundredths, min_margin_hundredths
+FROM settings
+WHERE id = 1`)
+
+	settings, err := scanSettings(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Settings{}, fmt.Errorf("read settings: %w", domain.ErrNotFound)
 	}
@@ -106,18 +103,45 @@ SELECT filament_type, kwh_per_hour, measured FROM power_rates ORDER BY filament_
 
 	var rates []domain.PowerRate
 	for rows.Next() {
-		var (
-			rate         domain.PowerRate
-			filamentType string
-		)
-		if err := rows.Scan(&filamentType, &rate.KwhPerHour, &rate.Measured); err != nil {
+		rate, err := scanPowerRate(rows)
+		if err != nil {
 			return nil, fmt.Errorf("read power rates: %w", err)
 		}
-		rate.FilamentType = domain.FilamentType(filamentType)
 		rates = append(rates, rate)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read power rates: %w", err)
 	}
 	return rates, nil
+}
+
+func scanSettings(row scanner) (domain.Settings, error) {
+	var kwhPrice, machineHourlyRate, printerPurchaseCost, defaultMargin, minMargin int64
+	if err := row.Scan(&kwhPrice, &machineHourlyRate, &printerPurchaseCost,
+		&defaultMargin, &minMargin); err != nil {
+		return domain.Settings{}, err
+	}
+	return domain.Settings{
+		KwhPrice:            domain.Cents(kwhPrice),
+		MachineHourlyRate:   domain.Cents(machineHourlyRate),
+		PrinterPurchaseCost: domain.Cents(printerPurchaseCost),
+		DefaultMargin:       domain.Percent(defaultMargin),
+		MinMargin:           domain.Percent(minMargin),
+	}, nil
+}
+
+func scanPowerRate(row scanner) (domain.PowerRate, error) {
+	var (
+		filamentType string
+		kwhPerHour   float64
+		measured     bool
+	)
+	if err := row.Scan(&filamentType, &kwhPerHour, &measured); err != nil {
+		return domain.PowerRate{}, err
+	}
+	return domain.PowerRate{
+		FilamentType: domain.FilamentType(filamentType),
+		KwhPerHour:   domain.KwhPerHour(kwhPerHour),
+		Measured:     measured,
+	}, nil
 }
