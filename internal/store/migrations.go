@@ -5,15 +5,11 @@ import (
 	"fmt"
 )
 
-// migration is one forward-only schema step. Never edit an applied migration —
-// append a new one, or an existing ledger and a fresh one end up with different
-// schemas.
 type migration struct {
 	name string
 	sql  string
 }
 
-// migrations is the ordered list. Order is the list order, not the name.
 var migrations = []migration{
 	{
 		name: "0001_spools",
@@ -31,8 +27,6 @@ CREATE TABLE spools (
 	},
 }
 
-// migrate applies every migration not yet recorded, in order. Safe to call on
-// every open: a database already at the latest step does nothing.
 func (s *Store) migrate(ctx context.Context) error {
 	q := s.q()
 	if _, err := q.ExecContext(ctx, `
@@ -65,8 +59,6 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 		if applied[m.name] {
 			continue
 		}
-		// Each migration is its own transaction, so a failure half-way through
-		// the list leaves the steps before it applied and recorded.
 		err := s.inTx(ctx, func(tx *Store) error {
 			if _, err := tx.q().ExecContext(ctx, m.sql); err != nil {
 				return err
