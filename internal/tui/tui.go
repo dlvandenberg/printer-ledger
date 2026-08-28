@@ -9,6 +9,8 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 )
 
+const currency = "€"
+
 const globalHelp = "tab/shift-tab switch tabs · q quit"
 
 var (

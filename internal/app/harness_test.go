@@ -73,7 +73,6 @@ func settingsUpdate() app.UpdateSettingsCmd {
 		PrinterPurchaseCost: domain.FormatCents(seeded.PrinterPurchaseCost),
 		DefaultMargin:       domain.FormatPercent(seeded.DefaultMargin),
 		MinMargin:           domain.FormatPercent(seeded.MinMargin),
-		Currency:            seeded.Currency,
 		PowerRates:          rates,
 	}
 }

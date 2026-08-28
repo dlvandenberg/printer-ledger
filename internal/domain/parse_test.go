@@ -19,8 +19,6 @@ func TestParseCents(t *testing.T) {
 		{in: "0.07", want: 7},
 		{in: ".5", want: 50},
 		{in: "€22.00", want: 2200},
-		{in: "$22.00", want: 2200},
-		{in: "£22", want: 2200},
 		{in: " 22.00 ", want: 2200},
 		{in: "-22.00", want: -2200},
 		{in: "", wantErr: true},

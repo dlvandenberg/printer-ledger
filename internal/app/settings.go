@@ -13,7 +13,6 @@ type UpdateSettingsCmd struct {
 	PrinterPurchaseCost string
 	DefaultMargin       string
 	MinMargin           string
-	Currency            string
 	PowerRates          map[domain.FilamentType]string
 }
 
@@ -23,7 +22,6 @@ type SettingsView struct {
 	PrinterPurchaseCost domain.Cents
 	DefaultMargin       domain.Percent
 	MinMargin           domain.Percent
-	Currency            string
 	PowerRates          []PowerRateView
 }
 
@@ -71,7 +69,6 @@ func (a *App) UpdateSettings(ctx context.Context, cmd UpdateSettingsCmd) (Settin
 func parseUpdateSettings(cmd UpdateSettingsCmd, current domain.Settings) (domain.Settings, error) {
 	errs := &domain.ValidationError{}
 	settings := current
-	settings.Currency = cmd.Currency
 
 	if cents, err := domain.ParseCents(cmd.KwhPrice); err != nil {
 		errs.Add(domain.FieldKwhPrice, err.Error())
@@ -145,7 +142,6 @@ func toSettingsView(s domain.Settings) SettingsView {
 		PrinterPurchaseCost: s.PrinterPurchaseCost,
 		DefaultMargin:       s.DefaultMargin,
 		MinMargin:           s.MinMargin,
-		Currency:            s.Currency,
 		PowerRates:          rates,
 	}
 }

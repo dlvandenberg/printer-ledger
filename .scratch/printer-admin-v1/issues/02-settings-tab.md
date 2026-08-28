@@ -2,8 +2,8 @@
 
 **What to build:** The operator opens the Settings tab on a brand-new empty database and configures
 the rates that drive every cost in the app: electricity price per kWh, a kWh-per-print-hour figure
-for each Filament Type, machine hourly rate, printer purchase cost, default margin, minimum margin,
-and display currency.
+for each Filament Type, machine hourly rate, printer purchase cost, default margin and minimum
+margin.
 
 Every per-type power rate is seeded with a plausible default at first launch, so energy is never
 silently costed at zero before anything has been measured. Each rate is flagged `default` or
@@ -17,7 +17,7 @@ before any spool, design or print exists.
 
 **Status:** ready-for-human
 
-- [x] All seven settings are editable and persist across a restart
+- [x] All six settings are editable and persist across a restart
 - [x] A fresh database is seeded with sensible defaults, including one power rate per Filament Type
 - [x] Each power rate shows whether it is a seeded default or an operator measurement
 - [x] Editing a power rate marks it as measured
@@ -34,7 +34,7 @@ before any spool, design or print exists.
 - **Money and percentage share one digit parser** (`parseHundredths`), so `22.000` and `12.755` are
   rejected by the same rule and `,` works as a decimal separator in both.
 - **Seeded rates:** PLA 0.09, PLA+ 0.10, PETG 0.12 kWh/h, electricity €0.28, machine €0.35/h,
-  default margin 50%, minimum margin 15%, currency `€`. Printer purchase cost seeds to **0**: it is
+  default margin 50%, minimum margin 15%. Printer purchase cost seeds to **0**: it is
   the one figure the operator knows exactly and an invented number would silently distort
   Break-Even (ticket 10) while looking configured.
 - **`measured` flips when the value moves.** `Settings.WithPowerRate` marks a rate measured only if
@@ -43,15 +43,11 @@ before any spool, design or print exists.
 - **Seeding runs on every open**, not inside the migration, so the defaults have one source
   (`domain.DefaultSettings`) rather than a copy in SQL, and a ledger created before a Filament Type
   existed gains that type's rate instead of costing its energy at zero (ADR-0010).
-- **The currency symbol is now read from Settings** by the Spools tab, replacing the TUI constant
-  ticket 01 left behind. A tab picks it up on its next reload; there is no cross-tab refresh yet.
 - **Settings are edited as one form** (`e`), not field by field, so a rejected submit keeps every
   typed value and reports every violation at once.
 
 ### Review follow-ups applied
 
-- **`ParseCents` no longer assumes `€`.** It strips whatever symbol leads the amount, so with the
-  display currency set to `$` the operator can type back what the screen shows.
 - **`default` / `measured` is a domain type** (`domain.RateSource`), returned on the view like
   `SpoolState`, rather than a label the renderer derives. The edit form shows it in each rate's
   label, so the flag is visible at the moment the operator decides whether to overwrite.
@@ -68,5 +64,13 @@ before any spool, design or print exists.
   (ticket 10) should surface that rather than the Settings tab inventing a price.
 - **`power_rates` rows are never deleted.** Retiring a Filament Type would leave an orphan row that
   `NewSettings` ignores.
-- **The Spools tab reads Settings on reload** for the currency symbol. A tab picks up a currency
-  change on its next reload, not immediately; a shared refresh belongs with the tab that needs it.
+
+### Currency dropped from the ticket
+
+The operator ruled out the display-currency setting after the first pass: the ledger is euros in the
+domain and in the database, and `€` is a TUI constant (as ticket 01 had it). Story 8 of the spec and
+the `currency` line in ADR-0008's context no longer describe the build. Nothing converts, so there
+was nothing for the setting to do but relabel amounts it could not restate.
+
+The `settings` table therefore has six columns, not seven, and migration `0002_settings` was
+corrected in place rather than followed by a drop — it had not shipped past this branch.

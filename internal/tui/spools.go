@@ -15,12 +15,11 @@ import (
 var _ tabModel = spoolsModel{}
 
 type spoolsModel struct {
-	app      *app.App
-	rows     []app.SpoolView
-	currency string
-	cursor   int
-	form     *form
-	loadErr  error
+	app     *app.App
+	rows    []app.SpoolView
+	cursor  int
+	form    *form
+	loadErr error
 }
 
 func newSpoolsModel(a *app.App) (spoolsModel, error) {
@@ -36,12 +35,7 @@ func (m *spoolsModel) reload() error {
 	if err != nil {
 		return err
 	}
-	settings, err := m.app.Settings(context.Background())
-	if err != nil {
-		return err
-	}
 	m.rows = rows
-	m.currency = settings.Currency
 	if m.cursor >= len(rows) {
 		m.cursor = max(0, len(rows)-1)
 	}
@@ -124,7 +118,7 @@ func (m spoolsModel) View() string {
 		fmt.Fprintf(&b, "%s%-6s  %-14s  %-12s  %10s  %10s  %-7s\n",
 			marker, row.FilamentType, truncate(row.Brand, 14), truncate(row.Color, 12),
 			domain.FormatGrams(row.RemainingGrams),
-			m.currency+domain.FormatCents(row.RemainingValue),
+			currency+domain.FormatCents(row.RemainingValue),
 			row.State)
 	}
 	return b.String()

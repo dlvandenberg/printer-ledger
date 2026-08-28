@@ -34,8 +34,7 @@ CREATE TABLE settings (
     machine_hourly_rate_cents   INTEGER NOT NULL,
     printer_purchase_cost_cents INTEGER NOT NULL,
     default_margin_hundredths   INTEGER NOT NULL,
-    min_margin_hundredths       INTEGER NOT NULL,
-    currency                    TEXT    NOT NULL
+    min_margin_hundredths       INTEGER NOT NULL
 );
 
 CREATE TABLE power_rates (

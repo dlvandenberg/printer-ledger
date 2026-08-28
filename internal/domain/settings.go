@@ -1,14 +1,11 @@
 package domain
 
-import "strings"
-
 const (
 	FieldKwhPrice            = "kwhPrice"
 	FieldMachineHourlyRate   = "machineHourlyRate"
 	FieldPrinterPurchaseCost = "printerPurchaseCost"
 	FieldDefaultMargin       = "defaultMargin"
 	FieldMinMargin           = "minMargin"
-	FieldCurrency            = "currency"
 )
 
 // FieldPowerRate keys one rate row per FilamentType, so adding a material adds
@@ -41,7 +38,6 @@ type Settings struct {
 	PrinterPurchaseCost Cents
 	DefaultMargin       Percent
 	MinMargin           Percent
-	Currency            string
 	PowerRates          []PowerRate
 }
 
@@ -54,7 +50,6 @@ func DefaultSettings() Settings {
 		PrinterPurchaseCost: 0,
 		DefaultMargin:       5000,
 		MinMargin:           1500,
-		Currency:            "€",
 		PowerRates: []PowerRate{
 			{FilamentType: PLA, KwhPerHour: 0.09},
 			{FilamentType: PLAPlus, KwhPerHour: 0.10},
@@ -64,8 +59,6 @@ func DefaultSettings() Settings {
 }
 
 func NewSettings(s Settings) (Settings, error) {
-	s.Currency = strings.TrimSpace(s.Currency)
-
 	v := &ValidationError{}
 	if s.KwhPrice < 0 {
 		v.Add(FieldKwhPrice, "cannot be negative")
@@ -81,9 +74,6 @@ func NewSettings(s Settings) (Settings, error) {
 	}
 	if s.MinMargin < 0 {
 		v.Add(FieldMinMargin, "cannot be negative")
-	}
-	if s.Currency == "" {
-		v.Add(FieldCurrency, "is required")
 	}
 
 	rates := make([]PowerRate, 0, len(FilamentTypes()))

@@ -89,14 +89,13 @@ func (m settingsModel) View() string {
 		b.WriteString("\n\n")
 	}
 
-	money := func(c domain.Cents) string { return m.view.Currency + domain.FormatCents(c) }
+	money := func(c domain.Cents) string { return currency + domain.FormatCents(c) }
 	rows := [][2]string{
 		{"Electricity per kWh", money(m.view.KwhPrice)},
 		{"Machine per hour", money(m.view.MachineHourlyRate)},
 		{"Printer purchase cost", money(m.view.PrinterPurchaseCost)},
 		{"Default margin", domain.FormatPercent(m.view.DefaultMargin)},
 		{"Minimum margin", domain.FormatPercent(m.view.MinMargin)},
-		{"Display currency", m.view.Currency},
 	}
 	for _, row := range rows {
 		fmt.Fprintf(&b, "  %-*s%s\n", labelWidth, row[0], row[1])

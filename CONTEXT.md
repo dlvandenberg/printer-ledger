@@ -24,10 +24,12 @@ Singleton aggregate holding the global rates that drive cost math.
 | `printerPurchaseCost` | What the printer cost. Used only by **Break-Even**. Seeds to zero — the operator is the only source |
 | `defaultMargin` | Seed value copied into a new **Design**'s `margin` |
 | `minMargin` | Floor below which a **Sale** price is flagged |
-| `currency` | Display currency, a symbol only — no FX, no conversion |
 
 Edited in-app on the Settings tab, stored in the database. Not a config file — these are
 historical inputs to reporting, so they belong with the data.
+
+The ledger is denominated in euros throughout; the `€` the operator sees is a TUI constant, not a
+setting. Currency is not configurable and there is no FX.
 
 ### Power Rate
 

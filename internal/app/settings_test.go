@@ -27,9 +27,6 @@ func TestFreshLedgerIsSeededWithSettings(t *testing.T) {
 	if got.MinMargin != 1500 {
 		t.Errorf("MinMargin = %d, want 1500", got.MinMargin)
 	}
-	if got.Currency != "€" {
-		t.Errorf("Currency = %q, want €", got.Currency)
-	}
 }
 
 func TestFreshLedgerSeedsOnePowerRatePerFilamentType(t *testing.T) {
@@ -80,7 +77,6 @@ func TestUpdateSettingsThenRead(t *testing.T) {
 	cmd.PrinterPurchaseCost = "399.00"
 	cmd.DefaultMargin = "60"
 	cmd.MinMargin = "12.5"
-	cmd.Currency = "$"
 
 	updated, err := a.UpdateSettings(ctx(), cmd)
 	if err != nil {
@@ -106,9 +102,6 @@ func TestUpdateSettingsThenRead(t *testing.T) {
 		}
 		if s.MinMargin != 1250 {
 			t.Errorf("MinMargin = %d, want 1250", s.MinMargin)
-		}
-		if s.Currency != "$" {
-			t.Errorf("Currency = %q, want $", s.Currency)
 		}
 	}
 }
@@ -229,7 +222,6 @@ func TestUpdateSettingsValidation(t *testing.T) {
 		{"malformed default margin", func(c *app.UpdateSettingsCmd) { c.DefaultMargin = "half" }, domain.FieldDefaultMargin},
 		{"negative default margin", func(c *app.UpdateSettingsCmd) { c.DefaultMargin = "-1" }, domain.FieldDefaultMargin},
 		{"negative minimum margin", func(c *app.UpdateSettingsCmd) { c.MinMargin = "-1" }, domain.FieldMinMargin},
-		{"empty currency", func(c *app.UpdateSettingsCmd) { c.Currency = "  " }, domain.FieldCurrency},
 		{"malformed power rate", func(c *app.UpdateSettingsCmd) { c.PowerRates[domain.PLA] = "a lot" }, domain.FieldPowerRate(domain.PLA)},
 		{"zero power rate", func(c *app.UpdateSettingsCmd) { c.PowerRates[domain.PETG] = "0" }, domain.FieldPowerRate(domain.PETG)},
 		{"negative power rate", func(c *app.UpdateSettingsCmd) { c.PowerRates[domain.PLAPlus] = "-0.1" }, domain.FieldPowerRate(domain.PLAPlus)},
@@ -256,7 +248,7 @@ func TestUpdateSettingsValidation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Settings: %v", err)
 			}
-			if after.KwhPrice != before.KwhPrice || after.Currency != before.Currency {
+			if after.KwhPrice != before.KwhPrice || after.MinMargin != before.MinMargin {
 				t.Error("a rejected update changed the stored settings")
 			}
 			for _, rate := range after.PowerRates {

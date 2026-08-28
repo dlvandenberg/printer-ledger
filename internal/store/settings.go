@@ -11,7 +11,7 @@ import (
 
 const settingsQuery = `
 SELECT kwh_price_cents, machine_hourly_rate_cents, printer_purchase_cost_cents,
-       default_margin_hundredths, min_margin_hundredths, currency
+       default_margin_hundredths, min_margin_hundredths
 FROM settings
 WHERE id = 1`
 
@@ -21,7 +21,7 @@ func (s *Store) Settings(ctx context.Context) (domain.Settings, error) {
 	var settings domain.Settings
 	err := s.q().QueryRowContext(ctx, settingsQuery).Scan(
 		&settings.KwhPrice, &settings.MachineHourlyRate, &settings.PrinterPurchaseCost,
-		&settings.DefaultMargin, &settings.MinMargin, &settings.Currency)
+		&settings.DefaultMargin, &settings.MinMargin)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Settings{}, fmt.Errorf("read settings: %w", domain.ErrNotFound)
 	}
@@ -44,12 +44,11 @@ SET kwh_price_cents             = ?,
     machine_hourly_rate_cents   = ?,
     printer_purchase_cost_cents = ?,
     default_margin_hundredths   = ?,
-    min_margin_hundredths       = ?,
-    currency                    = ?
+    min_margin_hundredths       = ?
 WHERE id = 1`,
 		int64(settings.KwhPrice), int64(settings.MachineHourlyRate),
 		int64(settings.PrinterPurchaseCost), int64(settings.DefaultMargin),
-		int64(settings.MinMargin), settings.Currency)
+		int64(settings.MinMargin))
 	if err != nil {
 		return fmt.Errorf("save settings: %w", err)
 	}
@@ -76,11 +75,11 @@ func (s *Store) seedSettings(ctx context.Context) error {
 	_, err := s.q().ExecContext(ctx, `
 INSERT OR IGNORE INTO settings (id, kwh_price_cents, machine_hourly_rate_cents,
                                 printer_purchase_cost_cents, default_margin_hundredths,
-                                min_margin_hundredths, currency)
-VALUES (1, ?, ?, ?, ?, ?, ?)`,
+                                min_margin_hundredths)
+VALUES (1, ?, ?, ?, ?, ?)`,
 		int64(seeded.KwhPrice), int64(seeded.MachineHourlyRate),
 		int64(seeded.PrinterPurchaseCost), int64(seeded.DefaultMargin),
-		int64(seeded.MinMargin), seeded.Currency)
+		int64(seeded.MinMargin))
 	if err != nil {
 		return fmt.Errorf("seed settings: %w", err)
 	}

@@ -24,7 +24,6 @@ func newSettingsForm(s app.SettingsView) *form {
 		fieldSpec{Key: domain.FieldPrinterPurchaseCost, Label: "Printer purchase cost", Placeholder: "399.00", Prefill: domain.FormatCents(s.PrinterPurchaseCost)},
 		fieldSpec{Key: domain.FieldDefaultMargin, Label: "Default margin", Placeholder: "50%", Prefill: domain.FormatPercent(s.DefaultMargin)},
 		fieldSpec{Key: domain.FieldMinMargin, Label: "Minimum margin", Placeholder: "15%", Prefill: domain.FormatPercent(s.MinMargin)},
-		fieldSpec{Key: domain.FieldCurrency, Label: "Display currency", Placeholder: "€", Prefill: s.Currency},
 	)
 	return newForm("Edit settings", specs)
 }
@@ -40,7 +39,6 @@ func updateSettingsCmd(f *form) app.UpdateSettingsCmd {
 		PrinterPurchaseCost: f.Value(domain.FieldPrinterPurchaseCost),
 		DefaultMargin:       f.Value(domain.FieldDefaultMargin),
 		MinMargin:           f.Value(domain.FieldMinMargin),
-		Currency:            f.Value(domain.FieldCurrency),
 		PowerRates:          rates,
 	}
 }
