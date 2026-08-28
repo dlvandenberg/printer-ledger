@@ -36,13 +36,14 @@ WHERE id = 1`)
 
 func (s *Store) SaveSettings(ctx context.Context, settings domain.Settings) error {
 	_, err := s.q().ExecContext(ctx, `
-UPDATE settings
-SET kwh_price_cents             = ?,
-    machine_hourly_rate_cents   = ?,
-    printer_purchase_cost_cents = ?,
-    default_margin_hundredths   = ?,
-    min_margin_hundredths       = ?
-WHERE id = 1`,
+INSERT INTO settings (id, kwh_price_cents, machine_hourly_rate_cents, printer_purchase_cost_cents,
+                      default_margin_hundredths, min_margin_hundredths)
+VALUES (1, ?, ?, ?, ?, ?)
+ON CONFLICT (id) DO UPDATE SET kwh_price_cents             = excluded.kwh_price_cents,
+                               machine_hourly_rate_cents   = excluded.machine_hourly_rate_cents,
+                               printer_purchase_cost_cents = excluded.printer_purchase_cost_cents,
+                               default_margin_hundredths   = excluded.default_margin_hundredths,
+                               min_margin_hundredths       = excluded.min_margin_hundredths`,
 		int64(settings.KwhPrice), int64(settings.MachineHourlyRate),
 		int64(settings.PrinterPurchaseCost), int64(settings.DefaultMargin),
 		int64(settings.MinMargin))
@@ -68,29 +69,17 @@ ON CONFLICT (filament_type) DO UPDATE SET kwh_per_hour = excluded.kwh_per_hour,
 // existed gains its rate rather than costing that material's energy at zero
 // (ADR-0008, ADR-0010).
 func (s *Store) seedSettings(ctx context.Context) error {
-	seeded := domain.DefaultSettings()
-	_, err := s.q().ExecContext(ctx, `
-INSERT OR IGNORE INTO settings (id, kwh_price_cents, machine_hourly_rate_cents,
-                                printer_purchase_cost_cents, default_margin_hundredths,
-                                min_margin_hundredths)
-VALUES (1, ?, ?, ?, ?, ?)`,
-		int64(seeded.KwhPrice), int64(seeded.MachineHourlyRate),
-		int64(seeded.PrinterPurchaseCost), int64(seeded.DefaultMargin),
-		int64(seeded.MinMargin))
-	if err != nil {
-		return fmt.Errorf("seed settings: %w", err)
-	}
-
-	for _, rate := range seeded.PowerRates {
-		_, err := s.q().ExecContext(ctx, `
-INSERT OR IGNORE INTO power_rates (filament_type, kwh_per_hour, measured)
-VALUES (?, ?, ?)`,
-			string(rate.FilamentType), float64(rate.KwhPerHour), rate.Measured)
-		if err != nil {
-			return fmt.Errorf("seed %s power rate: %w", rate.FilamentType, err)
+	return s.inTx(ctx, func(tx *Store) error {
+		defaults := domain.DefaultSettings()
+		current, err := tx.Settings(ctx)
+		switch {
+		case errors.Is(err, domain.ErrNotFound):
+			current = defaults
+		case err != nil:
+			return err
 		}
-	}
-	return nil
+		return tx.SaveSettings(ctx, current.SeedMissingRates(defaults))
+	})
 }
 
 func (s *Store) powerRates(ctx context.Context) ([]domain.PowerRate, error) {

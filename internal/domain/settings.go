@@ -124,6 +124,21 @@ func (s Settings) WithPowerRate(t FilamentType, k KwhPerHour) Settings {
 	return s
 }
 
+// SeedMissingRates fills in a rate for a Filament Type the ledger has never
+// held. It is not an edit, so the rate stays flagged as a default.
+func (s Settings) SeedMissingRates(defaults Settings) Settings {
+	rates := make([]PowerRate, 0, len(FilamentTypes()))
+	for _, t := range FilamentTypes() {
+		rate, ok := findPowerRate(s.PowerRates, t)
+		if !ok {
+			rate = defaults.PowerRate(t)
+		}
+		rates = append(rates, rate)
+	}
+	s.PowerRates = rates
+	return s
+}
+
 func findPowerRate(rates []PowerRate, t FilamentType) (PowerRate, bool) {
 	for _, rate := range rates {
 		if rate.FilamentType == t {
