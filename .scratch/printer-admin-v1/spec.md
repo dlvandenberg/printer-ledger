@@ -204,7 +204,7 @@ value returned by a use case, not something the UI computes.
   of the pair, not of the Spool. Basis for quoting (ADR-0015). Note this is a stricter test than
   `active`, which only means `remaining > 0`.
 - **Design** — `name`, `estimatedGrams` and `estimatedMinutes` **per single copy**,
-  `defaultFilamentType`, non-null `marginPct` seeded from `Settings.defaultMarginPct` at creation
+  `defaultFilamentType`, non-null `marginPct` seeded from `Settings.defaultMargin` at creation
   (ADR-0014). No nullable override, no read-time fallback. No source URL, no notes.
 - **Print** — design ref, date, `quantity >= 1`, minutes for the whole job, one-or-more filament
   usage rows **all of one Filament Type** (ADR-0012 as narrowed), `giftedCount`, `keptCount`,
@@ -350,7 +350,7 @@ Test helpers construct a fixture with known Settings so cost assertions are stab
   included.
 - **Design pricing** — the Design reference case exactly; the €0.50 round-up including the
   already-exact boundary; a design's own margin driving its price; a new design inheriting
-  `defaultMarginPct`; changing `defaultMarginPct` leaving existing designs untouched.
+  `defaultMargin`; changing `defaultMargin` leaving existing designs untouched.
 - **Quote basis** — with three PLA spools in stock the most expensive *capable* one is chosen; a
   spool too small for `estimatedGrams` is excluded even though it is active; with no capable spool
   the fallback reference price is used and flagged; a type never bought produces no row.
