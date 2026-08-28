@@ -27,18 +27,18 @@ var (
 // Choice and text fields sit in the same list, so neither has a position that
 // means anything.
 type fieldSpec struct {
-	// key is the field name errors are keyed by and values are read back by.
+	// Key is the field name errors are keyed by and values are read back by.
 	// Use the domain.Field* constants so a use case's ValidationError lands on
 	// the right row.
-	key   string
-	label string
-	// choices non-empty makes this a choice field, cycled with left/right.
+	Key   string
+	Label string
+	// Choices non-empty makes this a choice field, cycled with left/right.
 	// Empty makes it a text field.
-	choices []string
-	// placeholder and value apply to text fields. A choice field starts on its
+	Choices []string
+	// Placeholder and Prefill apply to text fields. A choice field starts on its
 	// first choice.
-	placeholder string
-	value       string
+	Placeholder string
+	Prefill     string
 }
 
 type field struct {
@@ -47,7 +47,7 @@ type field struct {
 	choice int
 }
 
-func (f field) isChoice() bool { return len(f.spec.choices) > 0 }
+func (f field) isChoice() bool { return len(f.spec.Choices) > 0 }
 
 // form is mutable open state, always held as a *form. One tab owns it from the
 // moment it opens the form until it drops the pointer, and never copies it out.
@@ -67,8 +67,8 @@ func newForm(title string, specs []fieldSpec) *form {
 		f := field{spec: spec}
 		if !f.isChoice() {
 			in := textinput.New()
-			in.Placeholder = spec.placeholder
-			in.SetValue(spec.value)
+			in.Placeholder = spec.Placeholder
+			in.SetValue(spec.Prefill)
 			in.CharLimit = fieldCharLimit
 			in.Width = fieldWidth
 			f.input = in
@@ -94,10 +94,10 @@ func (f *form) applyFocus() {
 	}
 }
 
-// update handles one key by mutating the form in place. A form is open state,
+// Update handles one key by mutating the form in place. A form is open state,
 // not a snapshot: the tab that opened it holds the only pointer and hands that
 // same pointer on until it closes the form.
-func (f *form) update(msg tea.KeyMsg) tea.Cmd {
+func (f *form) Update(msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
 	case "tab", "down":
 		f.focus = wrap(f.focus, 1, len(f.fields))
@@ -130,42 +130,42 @@ func (f *form) update(msg tea.KeyMsg) tea.Cmd {
 
 func (f *form) cycle(step int) {
 	current := &f.fields[f.focus]
-	current.choice = wrap(current.choice, step, len(current.spec.choices))
+	current.choice = wrap(current.choice, step, len(current.spec.Choices))
 }
 
-// value reports what the operator typed or chose for a field. The form does no
+// Value reports what the operator typed or chose for a field. The form does no
 // parsing and no validation; a use case decides whether the text is acceptable.
-func (f *form) value(key string) string {
+func (f *form) Value(key string) string {
 	for _, fld := range f.fields {
-		if fld.spec.key != key {
+		if fld.spec.Key != key {
 			continue
 		}
 		if fld.isChoice() {
-			return fld.spec.choices[fld.choice]
+			return fld.spec.Choices[fld.choice]
 		}
 		return fld.input.Value()
 	}
 	return ""
 }
 
-func (f *form) setErrors(errs *domain.ValidationError) { f.errs = errs }
+func (f *form) SetErrors(errs *domain.ValidationError) { f.errs = errs }
 
-// help lists the keys the form owns, naming each choice field so the operator
+// Help lists the keys the form owns, naming each choice field so the operator
 // knows what left/right moves. The tab appends nothing to it: an open form
 // captures every key except the shell's quit, so none of the shell's keys are
 // live.
-func (f *form) help() string {
+func (f *form) Help() string {
 	keys := []string{"tab/shift-tab next field"}
 	for _, fld := range f.fields {
 		if fld.isChoice() {
-			keys = append(keys, "left/right "+strings.ToLower(fld.spec.label))
+			keys = append(keys, "left/right "+strings.ToLower(fld.spec.Label))
 		}
 	}
 	keys = append(keys, "enter save", "esc cancel", "ctrl+c quit")
 	return strings.Join(keys, " · ")
 }
 
-func (f *form) view() string {
+func (f *form) View() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render(f.title))
 	b.WriteString("\n\n")
@@ -180,8 +180,8 @@ func (f *form) row(index int, fld field) string {
 	if f.focus == index {
 		style = focusedLabelStyle
 	}
-	line := style.Render(fld.spec.label) + f.control(fld)
-	if msg := f.errs.For(fld.spec.key); msg != "" {
+	line := style.Render(fld.spec.Label) + f.control(fld)
+	if msg := f.errs.For(fld.spec.Key); msg != "" {
 		line += "  " + errorStyle.Render("← "+msg)
 	}
 	return line + "\n"
@@ -191,8 +191,8 @@ func (f *form) control(fld field) string {
 	if !fld.isChoice() {
 		return fld.input.View()
 	}
-	rendered := make([]string, 0, len(fld.spec.choices))
-	for i, choice := range fld.spec.choices {
+	rendered := make([]string, 0, len(fld.spec.Choices))
+	for i, choice := range fld.spec.Choices {
 		style := inactiveTabStyle
 		if i == fld.choice {
 			style = activeTabStyle

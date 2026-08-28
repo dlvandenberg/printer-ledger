@@ -42,9 +42,9 @@ func (m *spoolsModel) reload() error {
 	return nil
 }
 
-func (m spoolsModel) capturesInput() bool { return m.form != nil }
+func (m spoolsModel) CapturesInput() bool { return m.form != nil }
 
-func (m spoolsModel) update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+func (m spoolsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	if m.form != nil {
 		return m.updateForm(msg)
 	}
@@ -73,7 +73,7 @@ func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		if _, err := m.app.AddSpool(context.Background(), addSpoolCmd(m.form)); err != nil {
 			var v *domain.ValidationError
 			if errors.As(err, &v) {
-				m.form.setErrors(v)
+				m.form.SetErrors(v)
 				return m, nil
 			}
 			m.loadErr = err
@@ -86,12 +86,12 @@ func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		return m, nil
 	}
 
-	return m, m.form.update(msg)
+	return m, m.form.Update(msg)
 }
 
-func (m spoolsModel) view() string {
+func (m spoolsModel) View() string {
 	if m.form != nil {
-		return m.form.view()
+		return m.form.View()
 	}
 
 	var b strings.Builder
@@ -124,9 +124,9 @@ func (m spoolsModel) view() string {
 	return b.String()
 }
 
-func (m spoolsModel) help() string {
+func (m spoolsModel) Help() string {
 	if m.form != nil {
-		return m.form.help()
+		return m.form.Help()
 	}
 	return "a add · up/down move · " + globalHelp
 }

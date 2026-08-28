@@ -66,7 +66,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-		if !m.current().capturesInput() {
+		if !m.current().CapturesInput() {
 			switch msg.String() {
 			case "q":
 				return m, tea.Quit
@@ -89,7 +89,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // it stick: bubbletea keeps only the Model returned here, and a tab's own open
 // state is a pointer it owns anyway.
 func (m Model) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	updated, cmd := m.current().update(msg)
+	updated, cmd := m.current().Update(msg)
 	m.tabs[m.active].model = updated
 	return m, cmd
 }
@@ -100,9 +100,9 @@ func (m Model) View() string {
 	var b strings.Builder
 	b.WriteString(m.tabBar())
 	b.WriteString("\n\n")
-	b.WriteString(m.current().view())
+	b.WriteString(m.current().View())
 	b.WriteString("\n\n")
-	b.WriteString(helpStyle.Render(m.current().help()))
+	b.WriteString(helpStyle.Render(m.current().Help()))
 	return b.String()
 }
 

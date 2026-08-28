@@ -8,13 +8,13 @@ import (
 // body and a help line, and says whether it is currently capturing input. The
 // shell routes to whichever tab is active without asking which one that is.
 type tabModel interface {
-	// update handles one key. A tab that ignores the key returns itself.
-	update(msg tea.KeyMsg) (tabModel, tea.Cmd)
-	view() string
-	help() string
-	// capturesInput reports that the tab is mid-interaction — an open form,
+	// Update handles one key. A tab that ignores the key returns itself.
+	Update(msg tea.KeyMsg) (tabModel, tea.Cmd)
+	View() string
+	Help() string
+	// CapturesInput reports that the tab is mid-interaction — an open form,
 	// say — and must receive every key except the shell's quit.
-	capturesInput() bool
+	CapturesInput() bool
 }
 
 type namedTab struct {
@@ -32,12 +32,12 @@ func newPlaceholder(name string) namedTab {
 	return namedTab{name: name, model: placeholderTab{title: name}}
 }
 
-func (t placeholderTab) update(tea.KeyMsg) (tabModel, tea.Cmd) { return t, nil }
+func (t placeholderTab) Update(tea.KeyMsg) (tabModel, tea.Cmd) { return t, nil }
 
-func (t placeholderTab) view() string {
+func (t placeholderTab) View() string {
 	return titleStyle.Render(t.title) + "\n" + placeholderStyle.Render("Nothing here yet.")
 }
 
-func (t placeholderTab) help() string { return globalHelp }
+func (t placeholderTab) Help() string { return globalHelp }
 
-func (t placeholderTab) capturesInput() bool { return false }
+func (t placeholderTab) CapturesInput() bool { return false }
