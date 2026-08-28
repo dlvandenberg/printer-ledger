@@ -19,6 +19,8 @@ func TestParseCents(t *testing.T) {
 		{in: "0.07", want: 7},
 		{in: ".5", want: 50},
 		{in: "€22.00", want: 2200},
+		{in: "$22.00", want: 2200},
+		{in: "£22", want: 2200},
 		{in: " 22.00 ", want: 2200},
 		{in: "-22.00", want: -2200},
 		{in: "", wantErr: true},
@@ -109,6 +111,111 @@ func TestParseDate(t *testing.T) {
 	for _, in := range []string{"", "01-08-2026", "2026-13-01", "tomorrow"} {
 		if _, err := domain.ParseDate(in); err == nil {
 			t.Errorf("ParseDate(%q) = nil error, want an error", in)
+		}
+	}
+}
+
+func TestParsePercent(t *testing.T) {
+	tests := []struct {
+		in      string
+		want    domain.Percent
+		wantErr bool
+	}{
+		{in: "50", want: 5000},
+		{in: "50%", want: 5000},
+		{in: " 12.5 % ", want: 1250},
+		{in: "12,75", want: 1275},
+		{in: "0", want: 0},
+		{in: "-1", want: -100},
+		{in: "", wantErr: true},
+		{in: "half", wantErr: true},
+		{in: "12.755", wantErr: true},
+	}
+
+	for _, tc := range tests {
+		got, err := domain.ParsePercent(tc.in)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("ParsePercent(%q) = %d, want an error", tc.in, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("ParsePercent(%q): %v", tc.in, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("ParsePercent(%q) = %d, want %d", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestFormatPercent(t *testing.T) {
+	tests := []struct {
+		in   domain.Percent
+		want string
+	}{
+		{in: 5000, want: "50%"},
+		{in: 1250, want: "12.5%"},
+		{in: 1275, want: "12.75%"},
+		{in: 0, want: "0%"},
+		{in: -100, want: "-1%"},
+	}
+
+	for _, tc := range tests {
+		if got := domain.FormatPercent(tc.in); got != tc.want {
+			t.Errorf("FormatPercent(%d) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestParseKwhPerHour(t *testing.T) {
+	tests := []struct {
+		in      string
+		want    domain.KwhPerHour
+		wantErr bool
+	}{
+		{in: "0.09", want: 0.09},
+		{in: " 0,09 ", want: 0.09},
+		{in: "0.09 kWh/h", want: 0.09},
+		{in: "0.125", want: 0.125},
+		{in: "-0.1", want: -0.1},
+		{in: "", wantErr: true},
+		{in: "some", wantErr: true},
+		{in: "NaN", wantErr: true},
+	}
+
+	for _, tc := range tests {
+		got, err := domain.ParseKwhPerHour(tc.in)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("ParseKwhPerHour(%q) = %v, want an error", tc.in, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("ParseKwhPerHour(%q): %v", tc.in, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("ParseKwhPerHour(%q) = %v, want %v", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestFormatKwhPerHour(t *testing.T) {
+	tests := []struct {
+		in   domain.KwhPerHour
+		want string
+	}{
+		{in: 0.09, want: "0.09"},
+		{in: 0.1, want: "0.1"},
+		{in: 0.125, want: "0.125"},
+	}
+
+	for _, tc := range tests {
+		if got := domain.FormatKwhPerHour(tc.in); got != tc.want {
+			t.Errorf("FormatKwhPerHour(%v) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
 }

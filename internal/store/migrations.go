@@ -25,6 +25,25 @@ CREATE TABLE spools (
     purchase_date       TEXT    NOT NULL
 );`,
 	},
+	{
+		name: "0002_settings",
+		sql: `
+CREATE TABLE settings (
+    id                          INTEGER PRIMARY KEY CHECK (id = 1),
+    kwh_price_cents             INTEGER NOT NULL,
+    machine_hourly_rate_cents   INTEGER NOT NULL,
+    printer_purchase_cost_cents INTEGER NOT NULL,
+    default_margin_hundredths   INTEGER NOT NULL,
+    min_margin_hundredths       INTEGER NOT NULL,
+    currency                    TEXT    NOT NULL
+);
+
+CREATE TABLE power_rates (
+    filament_type TEXT    PRIMARY KEY,
+    kwh_per_hour  REAL    NOT NULL,
+    measured      INTEGER NOT NULL
+);`,
+	},
 }
 
 func (s *Store) migrate(ctx context.Context) error {

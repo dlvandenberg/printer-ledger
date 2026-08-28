@@ -58,3 +58,33 @@ func fieldError(t *testing.T, err error, field string) string {
 }
 
 func ctx() context.Context { return context.Background() }
+
+// settingsUpdate resubmits the seeded defaults unchanged, so a test that varies
+// one field is the only thing that edits a rate.
+func settingsUpdate() app.UpdateSettingsCmd {
+	seeded := domain.DefaultSettings()
+	rates := map[domain.FilamentType]string{}
+	for _, rate := range seeded.PowerRates {
+		rates[rate.FilamentType] = domain.FormatKwhPerHour(rate.KwhPerHour)
+	}
+	return app.UpdateSettingsCmd{
+		KwhPrice:            domain.FormatCents(seeded.KwhPrice),
+		MachineHourlyRate:   domain.FormatCents(seeded.MachineHourlyRate),
+		PrinterPurchaseCost: domain.FormatCents(seeded.PrinterPurchaseCost),
+		DefaultMargin:       domain.FormatPercent(seeded.DefaultMargin),
+		MinMargin:           domain.FormatPercent(seeded.MinMargin),
+		Currency:            seeded.Currency,
+		PowerRates:          rates,
+	}
+}
+
+func powerRate(t *testing.T, s app.SettingsView, ft domain.FilamentType) app.PowerRateView {
+	t.Helper()
+	for _, rate := range s.PowerRates {
+		if rate.FilamentType == ft {
+			return rate
+		}
+	}
+	t.Fatalf("no power rate for %s", ft)
+	return app.PowerRateView{}
+}

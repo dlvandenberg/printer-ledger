@@ -9,8 +9,6 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 )
 
-const currency = "€"
-
 const globalHelp = "tab/shift-tab switch tabs · q quit"
 
 var (
@@ -35,13 +33,17 @@ func Run(a *app.App) error {
 	if err != nil {
 		return err
 	}
+	settings, err := newSettingsModel(a)
+	if err != nil {
+		return err
+	}
 	m := Model{tabs: []namedTab{
 		{name: "Spools", model: spools},
 		newPlaceholder("Designs"),
 		newPlaceholder("Prints"),
 		newPlaceholder("Sales"),
 		newPlaceholder("Report"),
-		newPlaceholder("Settings"),
+		{name: "Settings", model: settings},
 	}}
 	_, err = tea.NewProgram(m, tea.WithAltScreen()).Run()
 	return err
