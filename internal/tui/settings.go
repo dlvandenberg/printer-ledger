@@ -18,15 +18,15 @@ type settingsModel struct {
 	app     *app.App
 	view    app.SettingsView
 	form    *form
-	loadErr error
+	lastErr error
 }
 
-func newSettingsModel(a *app.App) (settingsModel, error) {
+// A failed read leaves the tab open carrying the error: the operator has to be
+// able to reach Settings on a ledger that cannot answer for itself.
+func newSettingsModel(a *app.App) settingsModel {
 	m := settingsModel{app: a}
-	if err := m.reload(); err != nil {
-		return m, err
-	}
-	return m, nil
+	m.lastErr = m.reload()
+	return m
 }
 
 func (m *settingsModel) reload() error {
@@ -62,13 +62,11 @@ func (m settingsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 				m.form.SetErrors(v)
 				return m, nil
 			}
-			m.loadErr = err
+			m.lastErr = err
 			return m, nil
 		}
 		m.form = nil
-		if err := m.reload(); err != nil {
-			m.loadErr = err
-		}
+		m.lastErr = m.reload()
 		return m, nil
 	}
 
@@ -76,18 +74,18 @@ func (m settingsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 }
 
 func (m settingsModel) View() string {
-	if m.form != nil {
-		return m.form.View()
-	}
-
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("Settings"))
-	b.WriteString("\n\n")
-
-	if m.loadErr != nil {
-		b.WriteString(errorStyle.Render(m.loadErr.Error()))
+	if m.lastErr != nil {
+		b.WriteString(errorStyle.Render(m.lastErr.Error()))
 		b.WriteString("\n\n")
 	}
+	if m.form != nil {
+		b.WriteString(m.form.View())
+		return b.String()
+	}
+
+	b.WriteString(titleStyle.Render("Settings"))
+	b.WriteString("\n\n")
 
 	money := func(c domain.Cents) string { return currency + domain.FormatCents(c) }
 	rows := [][2]string{
