@@ -118,39 +118,16 @@ func (f spoolForm) value(field string) string {
 	return ""
 }
 
-func (f spoolForm) parse() (app.AddSpoolCmd, *domain.ValidationError) {
-	errs := &domain.ValidationError{}
-	cmd := app.AddSpoolCmd{
-		FilamentType: f.filamentType(),
+func (f spoolForm) command() app.AddSpoolCmd {
+	return app.AddSpoolCmd{
+		FilamentType: f.filamentType().String(),
 		Brand:        f.value(domain.FieldBrand),
 		Color:        f.value(domain.FieldColor),
+		InitialGrams: f.value(domain.FieldInitialGrams),
+		TareGrams:    f.value(domain.FieldTareGrams),
+		PurchaseCost: f.value(domain.FieldPurchaseCost),
+		PurchaseDate: f.value(domain.FieldPurchaseDate),
 	}
-
-	if grams, err := domain.ParseGrams(f.value(domain.FieldInitialGrams)); err != nil {
-		errs.Add(domain.FieldInitialGrams, err.Error())
-	} else {
-		cmd.InitialGrams = grams
-	}
-
-	if grams, err := domain.ParseGrams(f.value(domain.FieldTareGrams)); err != nil {
-		errs.Add(domain.FieldTareGrams, err.Error())
-	} else {
-		cmd.TareGrams = grams
-	}
-
-	if cents, err := domain.ParseCents(f.value(domain.FieldPurchaseCost)); err != nil {
-		errs.Add(domain.FieldPurchaseCost, err.Error())
-	} else {
-		cmd.PurchaseCost = cents
-	}
-
-	if date, err := domain.ParseDate(f.value(domain.FieldPurchaseDate)); err != nil {
-		errs.Add(domain.FieldPurchaseDate, err.Error())
-	} else {
-		cmd.PurchaseDate = date
-	}
-
-	return cmd, errs
 }
 
 func (f spoolForm) view() string {

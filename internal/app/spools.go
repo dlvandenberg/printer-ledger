@@ -2,19 +2,22 @@ package app
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 )
 
+// AddSpoolCmd carries what the operator typed. Parsing it is the use case's
+// job, so every input path is reachable from an application-layer test.
 type AddSpoolCmd struct {
-	FilamentType domain.FilamentType
+	FilamentType string
 	Brand        string
 	Color        string
-	InitialGrams domain.Grams
-	TareGrams    domain.Grams
-	PurchaseCost domain.Cents
-	PurchaseDate time.Time
+	InitialGrams string
+	TareGrams    string
+	PurchaseCost string
+	PurchaseDate string
 }
 
 type SpoolView struct {
@@ -32,15 +35,7 @@ type SpoolView struct {
 }
 
 func (a *App) AddSpool(ctx context.Context, cmd AddSpoolCmd) (SpoolView, error) {
-	spool, err := domain.NewSpool(domain.Spool{
-		FilamentType: cmd.FilamentType,
-		Brand:        cmd.Brand,
-		Color:        cmd.Color,
-		InitialGrams: cmd.InitialGrams,
-		TareGrams:    cmd.TareGrams,
-		PurchaseCost: cmd.PurchaseCost,
-		PurchaseDate: cmd.PurchaseDate,
-	})
+	spool, err := parseAddSpool(cmd)
 	if err != nil {
 		return SpoolView{}, err
 	}
@@ -74,6 +69,52 @@ func (a *App) ListSpools(ctx context.Context) ([]SpoolView, error) {
 		views = append(views, toSpoolView(ledger))
 	}
 	return views, nil
+}
+
+func parseAddSpool(cmd AddSpoolCmd) (domain.Spool, error) {
+	errs := &domain.ValidationError{}
+	spool := domain.Spool{
+		FilamentType: domain.FilamentType(cmd.FilamentType),
+		Brand:        cmd.Brand,
+		Color:        cmd.Color,
+	}
+
+	if grams, err := domain.ParseGrams(cmd.InitialGrams); err != nil {
+		errs.Add(domain.FieldInitialGrams, err.Error())
+	} else {
+		spool.InitialGrams = grams
+	}
+
+	if grams, err := domain.ParseGrams(cmd.TareGrams); err != nil {
+		errs.Add(domain.FieldTareGrams, err.Error())
+	} else {
+		spool.TareGrams = grams
+	}
+
+	if cents, err := domain.ParseCents(cmd.PurchaseCost); err != nil {
+		errs.Add(domain.FieldPurchaseCost, err.Error())
+	} else {
+		spool.PurchaseCost = cents
+	}
+
+	if date, err := domain.ParseDate(cmd.PurchaseDate); err != nil {
+		errs.Add(domain.FieldPurchaseDate, err.Error())
+	} else {
+		spool.PurchaseDate = date
+	}
+
+	valid, err := domain.NewSpool(spool)
+	if err != nil {
+		var invariants *domain.ValidationError
+		if !errors.As(err, &invariants) {
+			return domain.Spool{}, err
+		}
+		errs.Merge(invariants)
+	}
+	if err := errs.OrNil(); err != nil {
+		return domain.Spool{}, err
+	}
+	return valid, nil
 }
 
 func toSpoolView(l domain.SpoolLedger) SpoolView {

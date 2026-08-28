@@ -69,12 +69,7 @@ func (m spoolsModel) updateForm(msg tea.KeyMsg) (spoolsModel, tea.Cmd) {
 		m.form = nil
 		return m, nil
 	case "enter":
-		cmd, errs := m.form.parse()
-		if errs.HasError() {
-			m.form.errs = errs
-			return m, nil
-		}
-		if _, err := m.app.AddSpool(context.Background(), cmd); err != nil {
+		if _, err := m.app.AddSpool(context.Background(), m.form.command()); err != nil {
 			var v *domain.ValidationError
 			if errors.As(err, &v) {
 				m.form.errs = v

@@ -43,3 +43,14 @@ func (e *ValidationError) OrNil() error {
 	}
 	return nil
 }
+
+func (e *ValidationError) Merge(other *ValidationError) {
+	if other == nil {
+		return
+	}
+	for _, f := range other.Fields {
+		if e.For(f.Field) == "" {
+			e.Add(f.Field, f.Message)
+		}
+	}
+}

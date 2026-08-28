@@ -3,7 +3,6 @@ package app_test
 import (
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
@@ -79,10 +78,10 @@ func TestSpoolRemainingValueIsPerSpoolPrice(t *testing.T) {
 	a := newApp(t)
 
 	cheap := plaSpool()
-	cheap.Brand, cheap.PurchaseCost, cheap.InitialGrams = "Cheap", 1500, 1000
+	cheap.Brand, cheap.PurchaseCost, cheap.InitialGrams = "Cheap", "15.00", "1000"
 
 	dear := plaSpool()
-	dear.Brand, dear.PurchaseCost, dear.InitialGrams = "Dear", 3000, 750
+	dear.Brand, dear.PurchaseCost, dear.InitialGrams = "Dear", "30.00", "750"
 
 	for _, cmd := range []app.AddSpoolCmd{cheap, dear} {
 		if _, err := a.AddSpool(ctx(), cmd); err != nil {
@@ -117,11 +116,17 @@ func TestAddSpoolValidation(t *testing.T) {
 		{"empty filament type", func(c *app.AddSpoolCmd) { c.FilamentType = "" }, domain.FieldFilamentType},
 		{"missing brand", func(c *app.AddSpoolCmd) { c.Brand = "  " }, domain.FieldBrand},
 		{"missing color", func(c *app.AddSpoolCmd) { c.Color = "" }, domain.FieldColor},
-		{"zero initial grams", func(c *app.AddSpoolCmd) { c.InitialGrams = 0 }, domain.FieldInitialGrams},
-		{"negative initial grams", func(c *app.AddSpoolCmd) { c.InitialGrams = -1 }, domain.FieldInitialGrams},
-		{"negative tare grams", func(c *app.AddSpoolCmd) { c.TareGrams = -1 }, domain.FieldTareGrams},
-		{"negative purchase cost", func(c *app.AddSpoolCmd) { c.PurchaseCost = -1 }, domain.FieldPurchaseCost},
-		{"missing purchase date", func(c *app.AddSpoolCmd) { c.PurchaseDate = time.Time{} }, domain.FieldPurchaseDate},
+		{"zero initial grams", func(c *app.AddSpoolCmd) { c.InitialGrams = "0" }, domain.FieldInitialGrams},
+		{"negative initial grams", func(c *app.AddSpoolCmd) { c.InitialGrams = "-1" }, domain.FieldInitialGrams},
+		{"negative tare grams", func(c *app.AddSpoolCmd) { c.TareGrams = "-1" }, domain.FieldTareGrams},
+		{"negative purchase cost", func(c *app.AddSpoolCmd) { c.PurchaseCost = "-0.01" }, domain.FieldPurchaseCost},
+		{"missing purchase date", func(c *app.AddSpoolCmd) { c.PurchaseDate = "" }, domain.FieldPurchaseDate},
+		{"malformed purchase cost", func(c *app.AddSpoolCmd) { c.PurchaseCost = "22.000" }, domain.FieldPurchaseCost},
+		{"empty purchase cost", func(c *app.AddSpoolCmd) { c.PurchaseCost = "" }, domain.FieldPurchaseCost},
+		{"fractional initial grams", func(c *app.AddSpoolCmd) { c.InitialGrams = "1.5g" }, domain.FieldInitialGrams},
+		{"malformed tare grams", func(c *app.AddSpoolCmd) { c.TareGrams = "heavy" }, domain.FieldTareGrams},
+		{"out of range purchase date", func(c *app.AddSpoolCmd) { c.PurchaseDate = "2026-13-01" }, domain.FieldPurchaseDate},
+		{"malformed purchase date", func(c *app.AddSpoolCmd) { c.PurchaseDate = "01-08-2026" }, domain.FieldPurchaseDate},
 	}
 
 	for _, tc := range tests {
@@ -151,7 +156,7 @@ func TestAddSpoolAcceptsFreeSpool(t *testing.T) {
 	a := newApp(t)
 
 	cmd := plaSpool()
-	cmd.PurchaseCost = 0
+	cmd.PurchaseCost = "0"
 
 	added, err := a.AddSpool(ctx(), cmd)
 	if err != nil {
@@ -217,5 +222,54 @@ func TestReopeningAnExistingDatabaseIsIdempotent(t *testing.T) {
 	}
 	if spools[0].ID != added.ID {
 		t.Errorf("ID = %d, want %d", spools[0].ID, added.ID)
+	}
+}
+
+func TestAddSpoolAcceptsCommaDecimalPrice(t *testing.T) {
+	a := newApp(t)
+
+	cmd := plaSpool()
+	cmd.PurchaseCost = "22,00"
+
+	added, err := a.AddSpool(ctx(), cmd)
+	if err != nil {
+		t.Fatalf("AddSpool: %v", err)
+	}
+	if added.PurchaseCost != 2200 {
+		t.Errorf("PurchaseCost = %d, want 2200", added.PurchaseCost)
+	}
+}
+
+func TestAddSpoolReportsParseFailuresAndInvariantsTogether(t *testing.T) {
+	a := newApp(t)
+
+	cmd := plaSpool()
+	cmd.PurchaseCost = "22.000"
+	cmd.Brand = "  "
+
+	_, err := a.AddSpool(ctx(), cmd)
+	if err == nil {
+		t.Fatal("expected AddSpool to be rejected")
+	}
+	if msg := fieldError(t, err, domain.FieldPurchaseCost); msg == "" {
+		t.Error("no error reported against the purchase cost")
+	}
+	if msg := fieldError(t, err, domain.FieldBrand); msg == "" {
+		t.Error("no error reported against the brand")
+	}
+}
+
+func TestAddSpoolReportsTheParseFailureNotTheInvariantItTrips(t *testing.T) {
+	a := newApp(t)
+
+	cmd := plaSpool()
+	cmd.InitialGrams = "1.5g"
+
+	_, err := a.AddSpool(ctx(), cmd)
+	if err == nil {
+		t.Fatal("expected AddSpool to be rejected")
+	}
+	if msg := fieldError(t, err, domain.FieldInitialGrams); msg != domain.ErrMalformedGrams.Error() {
+		t.Errorf("initialGrams error = %q, want %q", msg, domain.ErrMalformedGrams)
 	}
 }

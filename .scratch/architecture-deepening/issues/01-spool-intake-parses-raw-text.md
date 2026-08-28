@@ -28,9 +28,9 @@ unpicked five more times.
 
 **Status:** ready-for-agent
 
-- [ ] The Spool intake command carries what the operator typed, not pre-parsed domain values
-- [ ] Parse failures and Spool invariants arrive as one validation error keyed by the same field names the form renders against
-- [ ] Application-layer tests cover a malformed amount, malformed grams, a malformed date, and a value that parses but violates an invariant
-- [ ] A rejected submit persists nothing and keeps what was typed on screen
-- [ ] The TUI performs no parsing and constructs no validation error
-- [ ] Adding a spool from the Spools tab still works end to end
+- [x] The Spool intake command carries what the operator typed, not pre-parsed domain values
+- [x] Parse failures and Spool invariants arrive as one validation error keyed by the same field names the form renders against
+- [x] Application-layer tests cover a malformed amount, malformed grams, a malformed date, and a value that parses but violates an invariant
+- [x] A rejected submit persists nothing and keeps what was typed on screen
+- [x] The TUI performs no parsing and constructs no validation error
+- [x] Adding a spool from the Spools tab still works end to end

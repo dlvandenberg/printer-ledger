@@ -38,13 +38,13 @@ func date(t *testing.T, s string) time.Time {
 
 func plaSpool() app.AddSpoolCmd {
 	return app.AddSpoolCmd{
-		FilamentType: domain.PLA,
+		FilamentType: domain.PLA.String(),
 		Brand:        "Bambu",
 		Color:        "Black",
-		InitialGrams: 1000,
-		TareGrams:    210,
-		PurchaseCost: 2200,
-		PurchaseDate: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+		InitialGrams: "1000",
+		TareGrams:    "210",
+		PurchaseCost: "22.00",
+		PurchaseDate: "2026-08-01",
 	}
 }
 
