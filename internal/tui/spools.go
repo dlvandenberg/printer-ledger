@@ -16,7 +16,7 @@ type spoolsModel struct {
 	app     *app.App
 	rows    []app.SpoolView
 	cursor  int
-	form    *spoolForm
+	form    *form
 	loadErr error
 }
 
@@ -49,8 +49,8 @@ func (m spoolsModel) update(msg tea.KeyMsg) (spoolsModel, tea.Cmd) {
 
 	switch msg.String() {
 	case "a":
-		form := newSpoolForm()
-		m.form = &form
+		f := newSpoolForm()
+		m.form = &f
 	case "up", "k":
 		if m.cursor > 0 {
 			m.cursor--
@@ -69,10 +69,10 @@ func (m spoolsModel) updateForm(msg tea.KeyMsg) (spoolsModel, tea.Cmd) {
 		m.form = nil
 		return m, nil
 	case "enter":
-		if _, err := m.app.AddSpool(context.Background(), m.form.command()); err != nil {
+		if _, err := m.app.AddSpool(context.Background(), addSpoolCmd(*m.form)); err != nil {
 			var v *domain.ValidationError
 			if errors.As(err, &v) {
-				m.form.errs = v
+				m.form.setErrors(v)
 				return m, nil
 			}
 			m.loadErr = err
@@ -85,8 +85,8 @@ func (m spoolsModel) updateForm(msg tea.KeyMsg) (spoolsModel, tea.Cmd) {
 		return m, nil
 	}
 
-	form, cmd := m.form.update(msg)
-	m.form = &form
+	f, cmd := m.form.update(msg)
+	m.form = &f
 	return m, cmd
 }
 
