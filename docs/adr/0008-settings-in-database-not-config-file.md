@@ -1,6 +1,6 @@
 # ADR-0008: Settings live in the database, edited in the TUI
 
-**Status:** Accepted — 2026-08-25
+**Status:** Accepted — 2026-08-25. The `currency` entry is superseded by ADR-0019.
 
 ## Context
 

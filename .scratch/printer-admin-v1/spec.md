@@ -52,7 +52,7 @@ One SQLite file I can back up.
 5. As the operator, I want to record what the printer cost me, so that the app can tell me when it has paid for itself.
 6. As the operator, I want to set a default margin percentage, so that new designs start from the profit I intend to make.
 7. As the operator, I want to set a minimum margin percentage, so that the app can tell me when a sale price is too low.
-8. As the operator, I want to set my display currency, so that amounts read the way I think about money.
+8. ~~As the operator, I want to set my display currency, so that amounts read the way I think about money.~~ Dropped: the ledger is euros throughout and nothing converts, so the symbol is a renderer constant (ADR-0019).
 9. As the operator, I want sensible defaults on first launch, so that I can start entering spools before I have finished configuring everything.
 10. As the operator, I want to reach the Settings tab even when the database is empty, so that I can configure rates before recording any data.
 
@@ -184,8 +184,9 @@ value returned by a use case, not something the UI computes.
 
 - **Settings** — singleton, database-backed, edited in the TUI, no config file (ADR-0008). Holds
   `kwhPriceCents`, `kwhPerHourByType`, `machineHourlyRateCents`, `printerPurchaseCostCents`,
-  `defaultMarginPct`, `minMarginPct`, `currency`. Each `kwhPerHourByType` entry carries a
-  `measured bool` and is seeded with a plausible default at first launch.
+  `defaultMargin`, `minMargin`. No currency — the euro is fixed (ADR-0019). Each
+  `kwhPerHourByType` entry carries a `measured bool` and is seeded with a plausible default at first
+  launch.
 - **Filament Type** — enum `PLA`, `PLA+`, `PETG`. Power rates live in Settings, not on the enum, so
   a new material is a settings row rather than a code change (ADR-0010).
 - **Spool** — filament type, brand, colour, `initialGrams`, `tareGrams`, `purchaseCostCents`,
@@ -398,7 +399,7 @@ The TUI is not tested automatically. It is a renderer over `internal/app`, drive
   are typed in by hand.
 - An audit trail of edits. Records are corrected in place (ADR-0011); only spool adjustments are
   append-only.
-- Multi-currency and FX. Currency is a display string.
+- Multi-currency and FX. The euro is fixed and the symbol is a renderer constant (ADR-0019).
 - Networking, sync, cloud backup, and concurrent access to the database.
 - Automated TUI tests.
 

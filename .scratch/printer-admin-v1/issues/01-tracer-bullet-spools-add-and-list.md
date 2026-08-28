@@ -76,4 +76,5 @@ Commands mirror it on the way in: `app.AddSpoolCmd` rather than a half-built `do
 - **Parsing lives in `domain`** (`ParseCents`, `ParseGrams`, `ParseDate`). Pure, and it keeps the TUI
   from owning input formats. Covered by a small `domain` test because it is unreachable through the
   app seam and the TUI is untested.
-- **Currency symbol is a TUI constant** until ticket 02 puts `Settings.currency` in the database.
+- **Currency symbol is a TUI constant.** It stays one: ticket 02 dropped the setting and fixed the
+  euro (ADR-0019).
