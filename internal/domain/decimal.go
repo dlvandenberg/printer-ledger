@@ -15,6 +15,9 @@ func parseHundredths(s string) (int64, bool) {
 
 	negative := strings.HasPrefix(s, "-")
 	s = strings.TrimPrefix(s, "-")
+	if s == "" {
+		return 0, false
+	}
 
 	whole, frac, hasFrac := strings.Cut(s, ".")
 	if whole == "" {

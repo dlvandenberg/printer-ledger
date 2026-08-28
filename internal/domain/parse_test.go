@@ -22,6 +22,7 @@ func TestParseCents(t *testing.T) {
 		{in: " 22.00 ", want: 2200},
 		{in: "-22.00", want: -2200},
 		{in: "", wantErr: true},
+		{in: "-", wantErr: true},
 		{in: "abc", wantErr: true},
 		{in: "22.000", wantErr: true},
 		{in: "22.0.0", wantErr: true},
@@ -126,6 +127,7 @@ func TestParsePercent(t *testing.T) {
 		{in: "0", want: 0},
 		{in: "-1", want: -100},
 		{in: "", wantErr: true},
+		{in: "-", wantErr: true},
 		{in: "half", wantErr: true},
 		{in: "12.755", wantErr: true},
 	}
