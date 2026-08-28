@@ -120,7 +120,7 @@ func TestAddSpoolValidation(t *testing.T) {
 		{"negative initial grams", func(c *app.AddSpoolCmd) { c.InitialGrams = "-1" }, domain.FieldInitialGrams},
 		{"negative tare grams", func(c *app.AddSpoolCmd) { c.TareGrams = "-1" }, domain.FieldTareGrams},
 		{"negative purchase cost", func(c *app.AddSpoolCmd) { c.PurchaseCost = "-0.01" }, domain.FieldPurchaseCost},
-		{"missing purchase date", func(c *app.AddSpoolCmd) { c.PurchaseDate = "" }, domain.FieldPurchaseDate},
+		{"empty purchase date", func(c *app.AddSpoolCmd) { c.PurchaseDate = "" }, domain.FieldPurchaseDate},
 		{"malformed purchase cost", func(c *app.AddSpoolCmd) { c.PurchaseCost = "22.000" }, domain.FieldPurchaseCost},
 		{"empty purchase cost", func(c *app.AddSpoolCmd) { c.PurchaseCost = "" }, domain.FieldPurchaseCost},
 		{"fractional initial grams", func(c *app.AddSpoolCmd) { c.InitialGrams = "1.5g" }, domain.FieldInitialGrams},

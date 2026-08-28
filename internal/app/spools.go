@@ -109,7 +109,7 @@ func parseAddSpool(cmd AddSpoolCmd) (domain.Spool, error) {
 		if !errors.As(err, &invariants) {
 			return domain.Spool{}, err
 		}
-		errs.Merge(invariants)
+		errs.MergeMissing(invariants)
 	}
 	if err := errs.OrNil(); err != nil {
 		return domain.Spool{}, err

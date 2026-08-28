@@ -44,7 +44,10 @@ func (e *ValidationError) OrNil() error {
 	return nil
 }
 
-func (e *ValidationError) Merge(other *ValidationError) {
+// MergeMissing appends only the other error's fields that the receiver has no
+// message for. First one wins, so a parse failure is reported in preference to
+// the invariant that the unparsed zero value then trips.
+func (e *ValidationError) MergeMissing(other *ValidationError) {
 	if other == nil {
 		return
 	}
