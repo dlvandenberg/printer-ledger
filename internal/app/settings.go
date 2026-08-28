@@ -28,7 +28,7 @@ type SettingsView struct {
 type PowerRateView struct {
 	FilamentType domain.FilamentType
 	KwhPerHour   domain.KwhPerHour
-	Source       domain.RateSource
+	Measured     bool
 }
 
 func (a *App) Settings(ctx context.Context) (SettingsView, error) {
@@ -129,7 +129,7 @@ func toSettingsView(s domain.Settings) SettingsView {
 		rates = append(rates, PowerRateView{
 			FilamentType: filamentType,
 			KwhPerHour:   rate.KwhPerHour,
-			Source:       rate.Source(),
+			Measured:     rate.Measured,
 		})
 	}
 	return SettingsView{

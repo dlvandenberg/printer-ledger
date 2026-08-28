@@ -47,8 +47,8 @@ func TestFreshLedgerSeedsOnePowerRatePerFilamentType(t *testing.T) {
 		if rate.KwhPerHour <= 0 {
 			t.Errorf("%s rate = %v, want a rate above zero", want, rate.KwhPerHour)
 		}
-		if rate.Source != domain.RateDefault {
-			t.Errorf("%s rate source = %q, want default", want, rate.Source)
+		if rate.Measured {
+			t.Errorf("%s rate is measured, want a seeded default", want)
 		}
 	}
 }
@@ -125,8 +125,8 @@ func TestUpdateSettingsSurvivesAReopen(t *testing.T) {
 	if got.KwhPrice != 31 {
 		t.Errorf("KwhPrice = %d, want 31", got.KwhPrice)
 	}
-	if rate := powerRate(t, got, domain.PETG); rate.KwhPerHour != 0.15 || rate.Source != domain.RateMeasured {
-		t.Errorf("PETG rate = %v %s, want 0.15 measured", rate.KwhPerHour, rate.Source)
+	if rate := powerRate(t, got, domain.PETG); rate.KwhPerHour != 0.15 || !rate.Measured {
+		t.Errorf("PETG rate = %v measured=%t, want 0.15 measured", rate.KwhPerHour, rate.Measured)
 	}
 }
 
@@ -140,10 +140,10 @@ func TestEditingAPowerRateMarksItMeasured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpdateSettings: %v", err)
 	}
-	if rate := powerRate(t, updated, domain.PLA); rate.KwhPerHour != 0.11 || rate.Source != domain.RateMeasured {
-		t.Errorf("PLA rate = %v %s, want 0.11 measured", rate.KwhPerHour, rate.Source)
+	if rate := powerRate(t, updated, domain.PLA); rate.KwhPerHour != 0.11 || !rate.Measured {
+		t.Errorf("PLA rate = %v measured=%t, want 0.11 measured", rate.KwhPerHour, rate.Measured)
 	}
-	if rate := powerRate(t, updated, domain.PETG); rate.Source != domain.RateDefault {
+	if rate := powerRate(t, updated, domain.PETG); rate.Measured {
 		t.Error("PETG rate is measured, want it left as a seeded default")
 	}
 }
@@ -159,7 +159,7 @@ func TestResubmittingAPowerRateUnchangedLeavesItSeeded(t *testing.T) {
 		t.Fatalf("Settings: %v", err)
 	}
 	for _, rate := range got.PowerRates {
-		if rate.Source != domain.RateDefault {
+		if rate.Measured {
 			t.Errorf("%s rate is measured, want a seeded default", rate.FilamentType)
 		}
 	}
@@ -180,7 +180,7 @@ func TestAMeasuredPowerRateStaysMeasured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpdateSettings: %v", err)
 	}
-	if rate := powerRate(t, updated, domain.PLA); rate.Source != domain.RateMeasured {
+	if rate := powerRate(t, updated, domain.PLA); !rate.Measured {
 		t.Error("PLA rate lost its measured flag when resubmitted unchanged")
 	}
 }
@@ -253,7 +253,7 @@ func TestUpdateSettingsValidation(t *testing.T) {
 				t.Error("a rejected update changed the stored settings")
 			}
 			for _, rate := range after.PowerRates {
-				if rate.Source != domain.RateDefault {
+				if rate.Measured {
 					t.Errorf("a rejected update marked the %s rate measured", rate.FilamentType)
 				}
 			}

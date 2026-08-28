@@ -12,24 +12,10 @@ const (
 // a row rather than a constant (ADR-0010).
 func FieldPowerRate(t FilamentType) string { return "powerRate." + t.String() }
 
-type RateSource string
-
-const (
-	RateDefault  RateSource = "default"
-	RateMeasured RateSource = "measured"
-)
-
 type PowerRate struct {
 	FilamentType FilamentType
 	KwhPerHour   KwhPerHour
 	Measured     bool
-}
-
-func (r PowerRate) Source() RateSource {
-	if r.Measured {
-		return RateMeasured
-	}
-	return RateDefault
 }
 
 type Settings struct {

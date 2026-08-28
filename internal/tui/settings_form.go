@@ -14,7 +14,7 @@ func newSettingsForm(s app.SettingsView) *form {
 	for _, rate := range s.PowerRates {
 		specs = append(specs, fieldSpec{
 			Key:         domain.FieldPowerRate(rate.FilamentType),
-			Label:       fmt.Sprintf("%s kWh/h (%s)", rate.FilamentType, rate.Source),
+			Label:       fmt.Sprintf("%s kWh/h (%s)", rate.FilamentType, rateSource(rate.Measured)),
 			Placeholder: "0.09",
 			Prefill:     domain.FormatKwhPerHour(rate.KwhPerHour),
 		})

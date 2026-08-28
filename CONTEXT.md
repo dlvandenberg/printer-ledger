@@ -33,12 +33,13 @@ setting. Currency is not configurable and there is no FX.
 
 ### Power Rate
 
-The power draw of one **Filament Type**, in `kwhPerHour`, with a **Rate Source** of `default` or
-`measured`. Avoid: "wattage", "power setting".
+The power draw of one **Filament Type**, in `kwhPerHour`, plus a `measured` flag. Avoid: "wattage",
+"power setting".
 
 Every Power Rate is seeded with a plausible default at first launch, so energy is never silently
-costed at zero. The source becomes `measured` once the operator replaces the seeded figure with a
-smart-plug reading — that is, once the value moves. A `default` rate warns on the Print form.
+costed at zero. It becomes `measured` once the operator replaces the seeded figure with a smart-plug
+reading — that is, once the value moves. An unmeasured rate warns on the Print form. The TUI renders
+the flag as `measured` or `default`; those two words are labels, not a stored value.
 
 ### Percent
 

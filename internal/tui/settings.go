@@ -103,9 +103,16 @@ func (m settingsModel) View() string {
 	fmt.Fprintf(&b, "  %-6s  %8s  %-8s\n", "TYPE", "KWH/H", "SOURCE")
 	for _, rate := range m.view.PowerRates {
 		fmt.Fprintf(&b, "  %-6s  %8s  %-8s\n",
-			rate.FilamentType, domain.FormatKwhPerHour(rate.KwhPerHour), rate.Source)
+			rate.FilamentType, domain.FormatKwhPerHour(rate.KwhPerHour), rateSource(rate.Measured))
 	}
 	return b.String()
+}
+
+func rateSource(measured bool) string {
+	if measured {
+		return "measured"
+	}
+	return "default"
 }
 
 func (m settingsModel) Help() string {

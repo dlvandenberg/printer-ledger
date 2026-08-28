@@ -48,9 +48,10 @@ before any spool, design or print exists.
 
 ### Review follow-ups applied
 
-- **`default` / `measured` is a domain type** (`domain.RateSource`), returned on the view like
-  `SpoolState`, rather than a label the renderer derives. The edit form shows it in each rate's
-  label, so the flag is visible at the moment the operator decides whether to overwrite.
+- **`default` / `measured` is a rendering** of `PowerRate.measured`, not a domain type. A
+  `RateSource` enum alongside the bool held one concept twice, and unlike `SpoolState` nothing
+  computes with the two words — they only get printed. The edit form shows the flag in each rate's
+  label, so it is visible at the moment the operator decides whether to overwrite.
 - **ADR-0018** records `Percent` as integer hundredths; the `CONTEXT.md` Settings entry now matches
   the field names the code ships, and gains **Power Rate** and **Percent** entries.
 
