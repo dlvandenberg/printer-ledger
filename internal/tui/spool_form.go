@@ -5,9 +5,9 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 )
 
-func newSpoolForm() form {
+func newSpoolForm() *form {
 	return newForm("Add spool", []fieldSpec{
-		{key: domain.FieldFilamentType, label: "Filament type", choices: filamentTypeChoices()},
+		{key: domain.FieldFilamentType, label: "Filament type", choices: domain.FilamentTypeNames()},
 		{key: domain.FieldBrand, label: "Brand", placeholder: "Bambu"},
 		{key: domain.FieldColor, label: "Colour", placeholder: "Black"},
 		{key: domain.FieldInitialGrams, label: "Filament grams", placeholder: "1000"},
@@ -22,7 +22,7 @@ func newSpoolForm() form {
 	})
 }
 
-func addSpoolCmd(f form) app.AddSpoolCmd {
+func addSpoolCmd(f *form) app.AddSpoolCmd {
 	return app.AddSpoolCmd{
 		FilamentType: f.value(domain.FieldFilamentType),
 		Brand:        f.value(domain.FieldBrand),
@@ -32,13 +32,4 @@ func addSpoolCmd(f form) app.AddSpoolCmd {
 		PurchaseCost: f.value(domain.FieldPurchaseCost),
 		PurchaseDate: f.value(domain.FieldPurchaseDate),
 	}
-}
-
-func filamentTypeChoices() []string {
-	types := domain.FilamentTypes()
-	choices := make([]string, 0, len(types))
-	for _, t := range types {
-		choices = append(choices, t.String())
-	}
-	return choices
 }

@@ -60,3 +60,35 @@ with the caller, and stopped locals shadowing the `form` and `field` type names.
 Not actioned: `spoolsModel.help()` still hardcodes "left/right filament type" although the form now
 owns choice cycling. The help line is operator-visible text and this ticket forbids visible change;
 it belongs to the tab, and 03 is where the help line moves behind the tab seam.
+
+**2026-08-28 — review follow-ups: the form is pointer-mutating and owns its help line.**
+
+A `form` is now open state held as a `*form`, never a value. `newForm` returns `*form`, every
+method takes a pointer receiver, and `update` is `func (f *form) update(tea.KeyMsg) tea.Cmd` —
+it mutates in place and no longer returns a form for the caller to assign back. The
+`slices.Clone` that the previous comment describes is gone with it.
+
+That clone was half a rule. `setErrors` already mutated through the shared pointer while `update`
+defended against exactly that, so one struct carried two opposite disciplines and `spoolsModel`
+was the place they met. The rule written on the struct now: one tab owns the pointer from the
+moment it opens the form until it drops it, and never copies it out. Tab models are values that
+bubbletea replaces on every key, so holding one pointer is what makes a focus or choice move
+stick.
+
+`Model.routeKey` lost its `make`+`copy` for the same reason — it defended the tab slice against a
+caller holding the pre-update `Model`, which bubbletea never does. Both sites now say plainly that
+the write is meant to land.
+
+`form.help()` builds the help line from the field specs: the shared keys, one `left/right <label>`
+per choice field, then save/cancel/quit. `spoolsModel.help()` delegates to it while a form is open.
+The rendered text is byte-identical to the string it replaces, so the "no visible change" rule
+still holds — and this closes the loose end the previous comment deferred to 03, which shipped
+without touching it. The second adapter gets its help line for free.
+
+Also: `wrap(i, delta, n)` in `internal/tui/tui.go` replaces the third copy of `(i ± 1 + n) % n`
+(tab switching, field focus, choice cycling), and `var _ tabModel = spoolsModel{}` /
+`placeholderTab{}` put the interface check at the implementer instead of at the shell's tab list.
+
+Still not actioned: `form.value` returns `""` for a key no field declares, so a typo in a future
+adapter submits an empty field rather than failing loudly. Worth a decision before the second
+adapter, not worth guessing at now.

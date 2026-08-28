@@ -51,6 +51,34 @@ func TestAddSpoolThenList(t *testing.T) {
 	}
 }
 
+func TestAddSpoolParsesFilamentType(t *testing.T) {
+	tests := []struct {
+		name  string
+		typed string
+		want  domain.FilamentType
+	}{
+		{"exact", "PETG", domain.PETG},
+		{"lowercase", "pla+", domain.PLAPlus},
+		{"padded", "  pla  ", domain.PLA},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			a := newApp(t)
+			cmd := plaSpool()
+			cmd.FilamentType = tc.typed
+
+			added, err := a.AddSpool(ctx(), cmd)
+			if err != nil {
+				t.Fatalf("AddSpool: %v", err)
+			}
+			if added.FilamentType != tc.want {
+				t.Errorf("FilamentType = %q, want %q", added.FilamentType, tc.want)
+			}
+		})
+	}
+}
+
 func TestSpoolRemainingWithNoEvents(t *testing.T) {
 	a := newApp(t)
 

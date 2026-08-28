@@ -24,6 +24,10 @@ var (
 	placeholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).PaddingTop(1)
 )
 
+// wrap moves index i by delta within n items, rolling over at both ends.
+// Tab switching, field focus and choice cycling all ride on it.
+func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }
+
 type Model struct {
 	tabs   []namedTab
 	active int
@@ -67,10 +71,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "q":
 				return m, tea.Quit
 			case "tab":
-				m.active = (m.active + 1) % len(m.tabs)
+				m.active = wrap(m.active, 1, len(m.tabs))
 				return m, nil
 			case "shift+tab":
-				m.active = (m.active + len(m.tabs) - 1) % len(m.tabs)
+				m.active = wrap(m.active, -1, len(m.tabs))
 				return m, nil
 			}
 		}
@@ -81,14 +85,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // routeKey hands the key to the active tab and puts the tab it returns back in
-// place. The slice is cloned so the returned Model does not share its backing
-// array with the caller's.
+// place. The write lands in the one shared backing array, which is what makes
+// it stick: bubbletea keeps only the Model returned here, and a tab's own open
+// state is a pointer it owns anyway.
 func (m Model) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	updated, cmd := m.current().update(msg)
-	tabs := make([]namedTab, len(m.tabs))
-	copy(tabs, m.tabs)
-	tabs[m.active].model = updated
-	m.tabs = tabs
+	m.tabs[m.active].model = updated
 	return m, cmd
 }
 

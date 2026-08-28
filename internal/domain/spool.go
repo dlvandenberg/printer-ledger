@@ -39,7 +39,7 @@ func NewSpool(s Spool) (Spool, error) {
 
 	v := &ValidationError{}
 	if !s.FilamentType.Valid() {
-		v.Add(FieldFilamentType, "must be one of PLA, PLA+, PETG")
+		v.Add(FieldFilamentType, ErrMalformedFilamentType.Error())
 	}
 	if s.Brand == "" {
 		v.Add(FieldBrand, "is required")

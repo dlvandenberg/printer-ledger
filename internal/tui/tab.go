@@ -17,15 +17,13 @@ type tabModel interface {
 	capturesInput() bool
 }
 
-// namedTab is a tab plus the label the tab bar shows for it. The name is the
-// shell's, not the tab's: nothing routes on it.
 type namedTab struct {
 	name  string
 	model tabModel
 }
 
-// placeholderTab is a tab that has not been built yet. It holds no state and
-// ignores every key.
+var _ tabModel = placeholderTab{}
+
 type placeholderTab struct {
 	title string
 }

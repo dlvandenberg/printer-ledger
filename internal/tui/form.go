@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -50,6 +49,11 @@ type field struct {
 
 func (f field) isChoice() bool { return len(f.spec.choices) > 0 }
 
+// form is mutable open state, always held as a *form. One tab owns it from the
+// moment it opens the form until it drops the pointer, and never copies it out.
+// Tab models are values that bubbletea replaces on every key, so a form that
+// were copied with them would lose focus and choice moves; keeping one pointer
+// is what makes those moves stick.
 type form struct {
 	title  string
 	fields []field
@@ -57,7 +61,7 @@ type form struct {
 	errs   *domain.ValidationError
 }
 
-func newForm(title string, specs []fieldSpec) form {
+func newForm(title string, specs []fieldSpec) *form {
 	fields := make([]field, 0, len(specs))
 	for _, spec := range specs {
 		f := field{spec: spec}
@@ -72,7 +76,7 @@ func newForm(title string, specs []fieldSpec) form {
 		fields = append(fields, f)
 	}
 
-	f := form{title: title, fields: fields}
+	f := &form{title: title, fields: fields}
 	f.applyFocus()
 	return f
 }
@@ -90,51 +94,48 @@ func (f *form) applyFocus() {
 	}
 }
 
-func (f form) update(msg tea.KeyMsg) (form, tea.Cmd) {
-	// A value receiver would otherwise still share its backing array with the
-	// caller, so focus and choice moves would land on a form the caller has not
-	// replaced yet.
-	f.fields = slices.Clone(f.fields)
-
+// update handles one key by mutating the form in place. A form is open state,
+// not a snapshot: the tab that opened it holds the only pointer and hands that
+// same pointer on until it closes the form.
+func (f *form) update(msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
 	case "tab", "down":
-		f.focus = (f.focus + 1) % len(f.fields)
+		f.focus = wrap(f.focus, 1, len(f.fields))
 		f.applyFocus()
-		return f, nil
+		return nil
 	case "shift+tab", "up":
-		f.focus = (f.focus + len(f.fields) - 1) % len(f.fields)
+		f.focus = wrap(f.focus, -1, len(f.fields))
 		f.applyFocus()
-		return f, nil
+		return nil
 	case "left":
 		if f.fields[f.focus].isChoice() {
 			f.cycle(-1)
-			return f, nil
+			return nil
 		}
 	case "right":
 		if f.fields[f.focus].isChoice() {
 			f.cycle(1)
-			return f, nil
+			return nil
 		}
 	}
 
 	if f.fields[f.focus].isChoice() {
-		return f, nil
+		return nil
 	}
 
 	var cmd tea.Cmd
 	f.fields[f.focus].input, cmd = f.fields[f.focus].input.Update(msg)
-	return f, cmd
+	return cmd
 }
 
 func (f *form) cycle(step int) {
 	current := &f.fields[f.focus]
-	n := len(current.spec.choices)
-	current.choice = (current.choice + step + n) % n
+	current.choice = wrap(current.choice, step, len(current.spec.choices))
 }
 
 // value reports what the operator typed or chose for a field. The form does no
 // parsing and no validation; a use case decides whether the text is acceptable.
-func (f form) value(key string) string {
+func (f *form) value(key string) string {
 	for _, fld := range f.fields {
 		if fld.spec.key != key {
 			continue
@@ -149,7 +150,22 @@ func (f form) value(key string) string {
 
 func (f *form) setErrors(errs *domain.ValidationError) { f.errs = errs }
 
-func (f form) view() string {
+// help lists the keys the form owns, naming each choice field so the operator
+// knows what left/right moves. The tab appends nothing to it: an open form
+// captures every key except the shell's quit, so none of the shell's keys are
+// live.
+func (f *form) help() string {
+	keys := []string{"tab/shift-tab next field"}
+	for _, fld := range f.fields {
+		if fld.isChoice() {
+			keys = append(keys, "left/right "+strings.ToLower(fld.spec.label))
+		}
+	}
+	keys = append(keys, "enter save", "esc cancel", "ctrl+c quit")
+	return strings.Join(keys, " · ")
+}
+
+func (f *form) view() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render(f.title))
 	b.WriteString("\n\n")
@@ -159,7 +175,7 @@ func (f form) view() string {
 	return b.String()
 }
 
-func (f form) row(index int, fld field) string {
+func (f *form) row(index int, fld field) string {
 	style := labelStyle
 	if f.focus == index {
 		style = focusedLabelStyle
@@ -171,7 +187,7 @@ func (f form) row(index int, fld field) string {
 	return line + "\n"
 }
 
-func (f form) control(fld field) string {
+func (f *form) control(fld field) string {
 	if !fld.isChoice() {
 		return fld.input.View()
 	}

@@ -12,6 +12,8 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 )
 
+var _ tabModel = spoolsModel{}
+
 type spoolsModel struct {
 	app     *app.App
 	rows    []app.SpoolView
@@ -49,8 +51,7 @@ func (m spoolsModel) update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 
 	switch msg.String() {
 	case "a":
-		f := newSpoolForm()
-		m.form = &f
+		m.form = newSpoolForm()
 	case "up", "k":
 		if m.cursor > 0 {
 			m.cursor--
@@ -69,7 +70,7 @@ func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		m.form = nil
 		return m, nil
 	case "enter":
-		if _, err := m.app.AddSpool(context.Background(), addSpoolCmd(*m.form)); err != nil {
+		if _, err := m.app.AddSpool(context.Background(), addSpoolCmd(m.form)); err != nil {
 			var v *domain.ValidationError
 			if errors.As(err, &v) {
 				m.form.setErrors(v)
@@ -85,9 +86,7 @@ func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		return m, nil
 	}
 
-	f, cmd := m.form.update(msg)
-	m.form = &f
-	return m, cmd
+	return m, m.form.update(msg)
 }
 
 func (m spoolsModel) view() string {
@@ -127,7 +126,7 @@ func (m spoolsModel) view() string {
 
 func (m spoolsModel) help() string {
 	if m.form != nil {
-		return "tab/shift-tab next field · left/right filament type · enter save · esc cancel · ctrl+c quit"
+		return m.form.help()
 	}
 	return "a add · up/down move · " + globalHelp
 }

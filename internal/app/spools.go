@@ -74,9 +74,14 @@ func (a *App) ListSpools(ctx context.Context) ([]SpoolView, error) {
 func parseAddSpool(cmd AddSpoolCmd) (domain.Spool, error) {
 	errs := &domain.ValidationError{}
 	spool := domain.Spool{
-		FilamentType: domain.FilamentType(cmd.FilamentType),
-		Brand:        cmd.Brand,
-		Color:        cmd.Color,
+		Brand: cmd.Brand,
+		Color: cmd.Color,
+	}
+
+	if filamentType, err := domain.ParseFilamentType(cmd.FilamentType); err != nil {
+		errs.Add(domain.FieldFilamentType, err.Error())
+	} else {
+		spool.FilamentType = filamentType
 	}
 
 	if grams, err := domain.ParseGrams(cmd.InitialGrams); err != nil {

@@ -16,6 +16,8 @@ SELECT s.id, s.filament_type, s.brand, s.color, s.initial_grams, s.tare_grams,
        0 AS adjusted_grams
 FROM spools s`
 
+var _ domain.SpoolRepository = &Store{}
+
 func (s *Store) CreateSpool(ctx context.Context, sp domain.Spool) (domain.Spool, error) {
 	res, err := s.q().ExecContext(ctx, `
 INSERT INTO spools (filament_type, brand, color, initial_grams, tare_grams,
