@@ -26,7 +26,7 @@ unpicked five more times.
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The Spool intake command carries what the operator typed, not pre-parsed domain values
 - [x] Parse failures and Spool invariants arrive as one validation error keyed by the same field names the form renders against
@@ -34,3 +34,33 @@ unpicked five more times.
 - [x] A rejected submit persists nothing and keeps what was typed on screen
 - [x] The TUI performs no parsing and constructs no validation error
 - [x] Adding a spool from the Spools tab still works end to end
+
+## Comments
+
+**2026-08-28 — implemented and reviewed.**
+
+Commits:
+
+- `1195716` refactor: spool intake takes raw text, use case parses
+- `69622e8` refactor: rename Merge to MergeMissing, fix test case name
+
+All six acceptance criteria met. `AddSpoolCmd` now carries raw strings; `parseAddSpool`
+(`internal/app/spools.go`) parses them and folds the failures together with `domain.NewSpool`'s
+invariants into one `ValidationError` keyed by the `domain.Field*` constants the form renders
+against. The TUI's `spoolForm.parse` became `command()` — it reads its inputs and nothing else.
+
+Verified end to end by driving the real TUI in a pty: the happy path persisted
+`('PLA','Bambu','Black',1000,210,2200,'2026-08-28')` with `22,00` accepted as 2200 cents, and a
+rejected submit rendered both inline errors, kept the typed text on screen, and persisted nothing.
+
+Two review findings deliberately not actioned:
+
+- **Zero-value fallthrough.** A field that fails to parse is left at its Go zero before
+  `NewSpool` sees it. `MergeMissing` hides the resulting same-field invariant, but a rule
+  `R(a, b)` reported against `b` would surface a phantom error on a field the operator typed
+  correctly. No such rule exists on this form and none is expected — every Spool invariant is
+  single-field. Revisit if Settings grows a cross-field rule such as `defaultMarginPct >=
+  minMarginPct`.
+- **`domain.ParseFilamentType`.** The enum still crosses the boundary as an unchecked string
+  conversion, leaning on `NewSpool`'s `Valid()`. Safe, but the only field that does not go
+  through a domain `Parse*`.
