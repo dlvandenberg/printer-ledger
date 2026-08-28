@@ -19,8 +19,6 @@ var ErrMalformedFilamentType = errors.New("must be one of " + strings.Join(Filam
 
 func FilamentTypes() []FilamentType { return []FilamentType{PLA, PLAPlus, PETG} }
 
-// FilamentTypeNames is the same set as text, for anything that presents the
-// choice to the operator.
 func FilamentTypeNames() []string {
 	types := FilamentTypes()
 	names := make([]string, 0, len(types))
@@ -30,8 +28,6 @@ func FilamentTypeNames() []string {
 	return names
 }
 
-// ParseFilamentType turns what the operator typed or chose into a filament
-// type. Case and surrounding space do not matter; the material does.
 func ParseFilamentType(s string) (FilamentType, error) {
 	t := FilamentType(strings.ToUpper(strings.TrimSpace(s)))
 	if !t.Valid() {

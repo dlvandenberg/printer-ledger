@@ -23,20 +23,14 @@ var (
 )
 
 // fieldSpec declares one row of a form. A tab supplies the keys, labels and
-// kinds; the form owns focus, layout, choice cycling and error placement.
-// Choice and text fields sit in the same list, so neither has a position that
-// means anything.
+// kinds; the form owns focus, layout, choice cycling and error placement. Key
+// must be a domain.Field* constant, so a use case's ValidationError lands on
+// the right row. A non-empty Choices makes the row a choice field; the rest are
+// text fields, and choice and text rows sit in one list.
 type fieldSpec struct {
-	// Key is the field name errors are keyed by and values are read back by.
-	// Use the domain.Field* constants so a use case's ValidationError lands on
-	// the right row.
-	Key   string
-	Label string
-	// Choices non-empty makes this a choice field, cycled with left/right.
-	// Empty makes it a text field.
-	Choices []string
-	// Placeholder and Prefill apply to text fields. A choice field starts on its
-	// first choice.
+	Key         string
+	Label       string
+	Choices     []string
 	Placeholder string
 	Prefill     string
 }
@@ -49,11 +43,10 @@ type field struct {
 
 func (f field) isChoice() bool { return len(f.spec.Choices) > 0 }
 
-// form is mutable open state, always held as a *form. One tab owns it from the
-// moment it opens the form until it drops the pointer, and never copies it out.
-// Tab models are values that bubbletea replaces on every key, so a form that
-// were copied with them would lose focus and choice moves; keeping one pointer
-// is what makes those moves stick.
+// form is mutable open state, always held as a *form and mutated in place. Tab
+// models are values that bubbletea replaces on every key, so a form copied
+// along with one would lose focus and choice moves; the owning tab holds the
+// only pointer, from open until close.
 type form struct {
 	title  string
 	fields []field
@@ -94,9 +87,6 @@ func (f *form) applyFocus() {
 	}
 }
 
-// Update handles one key by mutating the form in place. A form is open state,
-// not a snapshot: the tab that opened it holds the only pointer and hands that
-// same pointer on until it closes the form.
 func (f *form) Update(msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
 	case "tab", "down":
@@ -133,8 +123,6 @@ func (f *form) cycle(step int) {
 	current.choice = wrap(current.choice, step, len(current.spec.Choices))
 }
 
-// Value reports what the operator typed or chose for a field. The form does no
-// parsing and no validation; a use case decides whether the text is acceptable.
 func (f *form) Value(key string) string {
 	for _, fld := range f.fields {
 		if fld.spec.Key != key {
@@ -150,10 +138,6 @@ func (f *form) Value(key string) string {
 
 func (f *form) SetErrors(errs *domain.ValidationError) { f.errs = errs }
 
-// Help lists the keys the form owns, naming each choice field so the operator
-// knows what left/right moves. The tab appends nothing to it: an open form
-// captures every key except the shell's quit, so none of the shell's keys are
-// live.
 func (f *form) Help() string {
 	keys := []string{"tab/shift-tab next field"}
 	for _, fld := range f.fields {

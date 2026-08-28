@@ -11,8 +11,6 @@ import (
 
 const currency = "€"
 
-// globalHelp lists the keys the shell owns. A tab appends its own keys in front
-// of it.
 const globalHelp = "tab/shift-tab switch tabs · q quit"
 
 var (
@@ -24,8 +22,6 @@ var (
 	placeholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).PaddingTop(1)
 )
 
-// wrap moves index i by delta within n items, rolling over at both ends.
-// Tab switching, field focus and choice cycling all ride on it.
 func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }
 
 type Model struct {
@@ -84,10 +80,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// routeKey hands the key to the active tab and puts the tab it returns back in
-// place. The write lands in the one shared backing array, which is what makes
-// it stick: bubbletea keeps only the Model returned here, and a tab's own open
-// state is a pointer it owns anyway.
+// The returned tab is written into the shared backing array, so it sticks even
+// though bubbletea keeps only the Model returned from Update.
 func (m Model) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	updated, cmd := m.current().Update(msg)
 	m.tabs[m.active].model = updated
