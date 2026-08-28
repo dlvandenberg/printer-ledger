@@ -18,26 +18,37 @@ Singleton aggregate holding the global rates that drive cost math.
 
 | Field | Meaning |
 |---|---|
-| `kwhPriceCents` | Electricity price per kWh |
-| `kwhPerHourByType` | Power draw per **Filament Type**, each entry flagged `measured` or `default` |
-| `machineHourlyRateCents` | Machine overhead per print hour: depreciation + maintenance + failure buffer |
-| `printerPurchaseCostCents` | What the printer cost. Used only by **Break-Even** |
-| `defaultMarginPct` | Seed value copied into a new **Design**'s `marginPct` |
-| `minMarginPct` | Floor below which a **Sale** price is flagged |
-| `currency` | Display currency |
+| `kwhPrice` | Electricity price per kWh |
+| `powerRates` | One **Power Rate** per **Filament Type** |
+| `machineHourlyRate` | Machine overhead per print hour: depreciation + maintenance + failure buffer |
+| `printerPurchaseCost` | What the printer cost. Used only by **Break-Even**. Seeds to zero — the operator is the only source |
+| `defaultMargin` | Seed value copied into a new **Design**'s `margin` |
+| `minMargin` | Floor below which a **Sale** price is flagged |
+| `currency` | Display currency, a symbol only — no FX, no conversion |
 
 Edited in-app on the Settings tab, stored in the database. Not a config file — these are
 historical inputs to reporting, so they belong with the data.
 
-Every `kwhPerHourByType` entry is seeded with a plausible default at first launch, so energy is
-never silently costed at zero. The `measured` flag records whether the operator has since
-replaced it with a smart-plug reading; an unmeasured rate warns on the Print form.
+### Power Rate
+
+The power draw of one **Filament Type**, in `kwhPerHour`, with a **Rate Source** of `default` or
+`measured`. Avoid: "wattage", "power setting".
+
+Every Power Rate is seeded with a plausible default at first launch, so energy is never silently
+costed at zero. The source becomes `measured` once the operator replaces the seeded figure with a
+smart-plug reading — that is, once the value moves. A `default` rate warns on the Print form.
+
+### Percent
+
+A margin, held as hundredths of a percent (`50%` is `5000`) so that cost math stays integral
+(ADR-0018). `kwhPerHour` is the one rate that stays a `float64`: it is a physical measurement, not
+money.
 
 ### Filament Type
 
 Enum: `PLA`, `PLA+`, `PETG`. The material class of a **Spool**.
 
-Rates hang off Settings (`kwhPerHourByType`), not off the enum, so adding a type is a settings
+Rates hang off Settings (`powerRates`), not off the enum, so adding a type is a settings
 row rather than a code change.
 
 Enclosed-chamber materials (ABS, ASA, PC, Nylon) are out of scope: the A1 is an open-frame
@@ -98,7 +109,7 @@ in the app is edited in place.
 
 A run that produced nothing — a print that failed at layer three — is recorded here, not as a
 **Print**. The filament is genuinely gone; the machine hours are absorbed by
-`machineHourlyRateCents`.
+`machineHourlyRate`.
 
 ### Spool Ledger
 
@@ -135,12 +146,12 @@ A printable model, and the only place a price is decided.
 | `estimatedGrams` | Slicer filament estimate **for one copy** |
 | `estimatedMinutes` | Slicer time estimate **for one copy** |
 | `defaultFilamentType` | The **Filament Type** this design is normally printed in |
-| `marginPct` | Margin used for **Suggested Price**. Seeded from `Settings.defaultMarginPct` at creation, edited freely thereafter |
+| `marginPct` | Margin used for **Suggested Price**. Seeded from `Settings.defaultMargin` at creation, edited freely thereafter |
 
 Estimates are always per single copy. A plate of four is recorded as a **Print** of
 `quantity` 4 whose actuals are typed in from the slicer; the Design's numbers do not change.
 
-`marginPct` is never null and has no fallback rule. Raising `Settings.defaultMarginPct` affects
+`marginPct` is never null and has no fallback rule. Raising `Settings.defaultMargin` affects
 Designs created afterwards, never existing ones.
 
 ### Estimated Cost
@@ -149,8 +160,8 @@ What a **Design** would cost to print, shown as one row per **Filament Type**:
 
 ```
 filament = estimatedGrams × costPerGram of the most expensive Capable Spool of that type
-energy   = estimatedHours × kwhPerHour[type] × kwhPriceCents
-overhead = estimatedHours × machineHourlyRateCents
+energy   = estimatedHours × kwhPerHour[type] × kwhPrice
+overhead = estimatedHours × machineHourlyRate
 ```
 
 The gram price is the **most expensive Capable Spool**, and the row names it. Quoting off the
@@ -258,7 +269,7 @@ Always on screen in the report, independent of the selected period.
 `{ printID, priceCents, date }`. The Print identifies which batch the copy came from, and
 selling from it is what decrements `available`.
 
-Warns — never blocks — when `priceCents < costPerCopy × (1 + Settings.minMarginPct)`. The ledger's
+Warns — never blocks — when `priceCents < costPerCopy × (1 + Settings.minMargin)`. The ledger's
 job is to record what was actually charged, haggling included; a refused sale would simply go
 unrecorded.
 
@@ -307,7 +318,7 @@ Two different questions, deliberately both reported and clearly labelled:
 - **Per-period profit** matches cost to revenue: cost is the `costPerCopy` of copies *sold* in the
   period, so margin % answers "is my pricing working".
 - **Break-Even** is cash-based and all-time:
-  `revenue − (printerPurchaseCostCents + all spool spend + energy spend)`.
+  `revenue − (printerPurchaseCost + all spool spend + energy spend)`.
   It counts spools bought but not yet printed, because that cash is really gone.
 
 Per-period profit and the change in the bank balance are therefore different numbers. Break-Even
