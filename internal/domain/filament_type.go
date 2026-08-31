@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"slices"
 	"strings"
 )
 
@@ -37,12 +38,7 @@ func ParseFilamentType(s string) (FilamentType, error) {
 }
 
 func (t FilamentType) Valid() bool {
-	for _, known := range FilamentTypes() {
-		if t == known {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(FilamentTypes(), t)
 }
 
 func (t FilamentType) String() string { return string(t) }

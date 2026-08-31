@@ -15,7 +15,7 @@ before any spool, design or print exists.
 
 **Blocked by:** 01
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] All six settings are editable and persist across a restart
 - [x] A fresh database is seeded with sensible defaults, including one power rate per Filament Type

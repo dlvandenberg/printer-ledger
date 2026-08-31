@@ -20,6 +20,13 @@ type AddSpoolCmd struct {
 	PurchaseDate string
 }
 
+type ReweighSpoolCmd struct {
+	SpoolID       int64
+	MeasuredGrams string
+	AdjustedOn    string
+	Note          string
+}
+
 type SpoolView struct {
 	ID             int64
 	FilamentType   domain.FilamentType
@@ -29,9 +36,25 @@ type SpoolView struct {
 	TareGrams      domain.Grams
 	PurchaseCost   domain.Cents
 	PurchaseDate   time.Time
+	UsedGrams      domain.Grams
+	AdjustedGrams  domain.Grams
 	RemainingGrams domain.Grams
 	RemainingValue domain.Cents
 	State          domain.SpoolState
+}
+
+type SpoolDetailView struct {
+	Spool       SpoolView
+	Adjustments []SpoolAdjustmentView
+}
+
+type SpoolAdjustmentView struct {
+	ID               int64
+	MeasuredGrams    domain.Grams
+	DerivedRemaining domain.Grams
+	DeltaGrams       domain.Grams
+	AdjustedOn       time.Time
+	Note             string
 }
 
 func (a *App) AddSpool(ctx context.Context, cmd AddSpoolCmd) (SpoolView, error) {
@@ -69,6 +92,93 @@ func (a *App) ListSpools(ctx context.Context) ([]SpoolView, error) {
 		views = append(views, toSpoolView(ledger))
 	}
 	return views, nil
+}
+
+func (a *App) ListActiveSpools(ctx context.Context) ([]SpoolView, error) {
+	spools, err := a.ListSpools(ctx)
+	if err != nil {
+		return nil, err
+	}
+	active := make([]SpoolView, 0, len(spools))
+	for _, spool := range spools {
+		if spool.State == domain.SpoolActive {
+			active = append(active, spool)
+		}
+	}
+	return active, nil
+}
+
+func (a *App) SpoolDetail(ctx context.Context, id int64) (SpoolDetailView, error) {
+	ledger, err := a.db.SpoolLedger(ctx, id)
+	if err != nil {
+		return SpoolDetailView{}, err
+	}
+	adjustments, err := a.db.SpoolAdjustments(ctx, id)
+	if err != nil {
+		return SpoolDetailView{}, err
+	}
+	return toSpoolDetailView(ledger, adjustments), nil
+}
+
+func (a *App) ReweighSpool(ctx context.Context, cmd ReweighSpoolCmd) (SpoolDetailView, error) {
+	measured, adjustedOn, err := parseReweighSpool(cmd)
+	if err != nil {
+		return SpoolDetailView{}, err
+	}
+
+	var view SpoolDetailView
+	err = a.db.InTx(ctx, func(tx domain.Database) error {
+		ledger, err := tx.SpoolLedger(ctx, cmd.SpoolID)
+		if err != nil {
+			return err
+		}
+		adjustment, err := domain.NewSpoolAdjustment(ledger, measured, adjustedOn, cmd.Note)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.CreateSpoolAdjustment(ctx, adjustment); err != nil {
+			return err
+		}
+		reread, err := tx.SpoolLedger(ctx, cmd.SpoolID)
+		if err != nil {
+			return err
+		}
+		adjustments, err := tx.SpoolAdjustments(ctx, cmd.SpoolID)
+		if err != nil {
+			return err
+		}
+		view = toSpoolDetailView(reread, adjustments)
+		return nil
+	})
+	if err != nil {
+		return SpoolDetailView{}, err
+	}
+	return view, nil
+}
+
+func parseReweighSpool(cmd ReweighSpoolCmd) (domain.Grams, time.Time, error) {
+	errs := &domain.ValidationError{}
+	var (
+		measured   domain.Grams
+		adjustedOn time.Time
+	)
+
+	if grams, err := domain.ParseGrams(cmd.MeasuredGrams); err != nil {
+		errs.Add(domain.FieldMeasuredGrams, err.Error())
+	} else {
+		measured = grams
+	}
+
+	if date, err := domain.ParseDate(cmd.AdjustedOn); err != nil {
+		errs.Add(domain.FieldAdjustedOn, err.Error())
+	} else {
+		adjustedOn = date
+	}
+
+	if err := errs.OrNil(); err != nil {
+		return 0, time.Time{}, err
+	}
+	return measured, adjustedOn, nil
 }
 
 func parseAddSpool(cmd AddSpoolCmd) (domain.Spool, error) {
@@ -132,8 +242,25 @@ func toSpoolView(l domain.SpoolLedger) SpoolView {
 		TareGrams:      l.Spool.TareGrams,
 		PurchaseCost:   l.Spool.PurchaseCost,
 		PurchaseDate:   l.Spool.PurchaseDate,
+		UsedGrams:      l.UsedGrams,
+		AdjustedGrams:  l.AdjustedGrams,
 		RemainingGrams: l.Remaining(),
 		RemainingValue: l.RemainingValue(),
 		State:          l.State(),
 	}
+}
+
+func toSpoolDetailView(l domain.SpoolLedger, adjustments []domain.SpoolAdjustment) SpoolDetailView {
+	views := make([]SpoolAdjustmentView, 0, len(adjustments))
+	for _, a := range adjustments {
+		views = append(views, SpoolAdjustmentView{
+			ID:               a.ID,
+			MeasuredGrams:    a.MeasuredGrams,
+			DerivedRemaining: a.DerivedRemaining(l.Spool.TareGrams),
+			DeltaGrams:       a.DeltaGrams,
+			AdjustedOn:       a.AdjustedOn,
+			Note:             a.Note,
+		})
+	}
+	return SpoolDetailView{Spool: toSpoolView(l), Adjustments: views}
 }

@@ -11,6 +11,8 @@ type SpoolRepository interface {
 	CreateSpool(ctx context.Context, s Spool) (Spool, error)
 	SpoolLedgers(ctx context.Context) ([]SpoolLedger, error)
 	SpoolLedger(ctx context.Context, id int64) (SpoolLedger, error)
+	CreateSpoolAdjustment(ctx context.Context, a SpoolAdjustment) (SpoolAdjustment, error)
+	SpoolAdjustments(ctx context.Context, spoolID int64) ([]SpoolAdjustment, error)
 }
 
 type SettingsRepository interface {

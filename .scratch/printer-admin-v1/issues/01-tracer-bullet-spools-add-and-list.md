@@ -21,7 +21,7 @@ The other five tabs are placeholders. `CGO_ENABLED=0` must produce a working sta
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] A Go module with a `main` that opens or creates the database and starts the TUI
 - [x] `-db` flag overrides the default database path

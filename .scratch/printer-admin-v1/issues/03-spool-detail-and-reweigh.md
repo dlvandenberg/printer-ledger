@@ -17,12 +17,12 @@ history so past prints still explain their costs.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Spool detail shows initial grams, consumption, each adjustment with its date and note, and the resulting remaining
-- [ ] Re-weighing takes the total weight from the scale and derives remaining using the spool's tare
-- [ ] An adjustment records measured grams, derived remaining, the delta against the previous figure, a date and a note
-- [ ] Adjustments cannot be edited or deleted
-- [ ] A sequence of several adjustments produces the correct remaining
-- [ ] An adjustment that would drive remaining below zero is rejected
-- [ ] A spool at zero remaining shows as empty and is excluded from filament pickers, but stays in the list and in history
+- [x] Spool detail shows initial grams, consumption, each adjustment with its date and note, and the resulting remaining
+- [x] Re-weighing takes the total weight from the scale and derives remaining using the spool's tare
+- [x] An adjustment records measured grams, derived remaining, the delta against the previous figure, a date and a note
+- [x] Adjustments cannot be edited or deleted
+- [x] A sequence of several adjustments produces the correct remaining
+- [x] An adjustment that would drive remaining below zero is rejected
+- [x] A spool at zero remaining shows as empty and is excluded from filament pickers, but stays in the list and in history

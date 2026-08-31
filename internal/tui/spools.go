@@ -18,6 +18,7 @@ type spoolsModel struct {
 	app     *app.App
 	rows    []app.SpoolView
 	cursor  int
+	detail  *app.SpoolDetailView
 	form    *form
 	loadErr error
 }
@@ -49,9 +50,17 @@ func (m spoolsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		return m.updateForm(msg)
 	}
 
+	if m.detail != nil {
+		return m.updateDetail(msg)
+	}
+
 	switch msg.String() {
 	case "a":
 		m.form = newSpoolForm()
+	case "enter":
+		if len(m.rows) > 0 {
+			m.openDetail(m.rows[m.cursor].ID)
+		}
 	case "up", "k":
 		if m.cursor > 0 {
 			m.cursor--
@@ -64,13 +73,32 @@ func (m spoolsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	return m, nil
 }
 
+func (m spoolsModel) updateDetail(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.detail = nil
+	case "r":
+		m.form = newReweighForm()
+	}
+	return m, nil
+}
+
+func (m *spoolsModel) openDetail(id int64) {
+	detail, err := m.app.SpoolDetail(context.Background(), id)
+	if err != nil {
+		m.loadErr = err
+		return
+	}
+	m.detail = &detail
+}
+
 func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.form = nil
 		return m, nil
 	case "enter":
-		if _, err := m.app.AddSpool(context.Background(), addSpoolCmd(m.form)); err != nil {
+		if err := m.submitForm(); err != nil {
 			var v *domain.ValidationError
 			if errors.As(err, &v) {
 				m.form.SetErrors(v)
@@ -89,19 +117,33 @@ func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	return m, m.form.Update(msg)
 }
 
+// submitForm reads the tab's own state to decide which use case the open form
+// belongs to: a detail screen is open only for a re-weigh.
+func (m *spoolsModel) submitForm() error {
+	if m.detail == nil {
+		_, err := m.app.AddSpool(context.Background(), addSpoolCmd(m.form))
+		return err
+	}
+	detail, err := m.app.ReweighSpool(context.Background(), reweighSpoolCmd(m.form, m.detail.Spool.ID))
+	if err != nil {
+		return err
+	}
+	m.detail = &detail
+	return nil
+}
+
 func (m spoolsModel) View() string {
 	if m.form != nil {
-		return m.form.View()
+		return m.failure() + m.form.View()
+	}
+	if m.detail != nil {
+		return m.failure() + spoolDetailView(*m.detail)
 	}
 
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("Spools"))
 	b.WriteString("\n\n")
-
-	if m.loadErr != nil {
-		b.WriteString(errorStyle.Render(m.loadErr.Error()))
-		b.WriteString("\n\n")
-	}
+	b.WriteString(m.failure())
 
 	if len(m.rows) == 0 {
 		b.WriteString(placeholderStyle.Render("No spools yet. Press a to add one."))
@@ -124,11 +166,21 @@ func (m spoolsModel) View() string {
 	return b.String()
 }
 
+func (m spoolsModel) failure() string {
+	if m.loadErr == nil {
+		return ""
+	}
+	return errorStyle.Render(m.loadErr.Error()) + "\n\n"
+}
+
 func (m spoolsModel) Help() string {
 	if m.form != nil {
 		return m.form.Help()
 	}
-	return "a add · up/down move · " + globalHelp
+	if m.detail != nil {
+		return "r re-weigh · esc back · " + globalHelp
+	}
+	return "a add · enter detail · up/down move · " + globalHelp
 }
 
 func truncate(s string, width int) string {

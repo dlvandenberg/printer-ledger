@@ -33,3 +33,25 @@ func addSpoolCmd(f *form) app.AddSpoolCmd {
 		PurchaseDate: f.Value(domain.FieldPurchaseDate),
 	}
 }
+
+func newReweighForm() *form {
+	return newForm("Re-weigh spool", []fieldSpec{
+		{Key: domain.FieldMeasuredGrams, Label: "Weight on the scale", Placeholder: "610"},
+		{
+			Key:         domain.FieldAdjustedOn,
+			Label:       "Date",
+			Placeholder: domain.DateLayout,
+			Prefill:     domain.FormatDate(domain.Today()),
+		},
+		{Key: domain.FieldNote, Label: "Note", Placeholder: "purge tower"},
+	})
+}
+
+func reweighSpoolCmd(f *form, spoolID int64) app.ReweighSpoolCmd {
+	return app.ReweighSpoolCmd{
+		SpoolID:       spoolID,
+		MeasuredGrams: f.Value(domain.FieldMeasuredGrams),
+		AdjustedOn:    f.Value(domain.FieldAdjustedOn),
+		Note:          f.Value(domain.FieldNote),
+	}
+}

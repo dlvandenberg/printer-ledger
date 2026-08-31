@@ -87,3 +87,12 @@ func powerRate(t *testing.T, s app.SettingsView, ft domain.FilamentType) app.Pow
 	t.Fatalf("no power rate for %s", ft)
 	return app.PowerRateView{}
 }
+
+func reweigh(spoolID int64, measured string) app.ReweighSpoolCmd {
+	return app.ReweighSpoolCmd{
+		SpoolID:       spoolID,
+		MeasuredGrams: measured,
+		AdjustedOn:    "2026-08-20",
+		Note:          "purge tower",
+	}
+}

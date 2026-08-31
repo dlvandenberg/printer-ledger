@@ -43,6 +43,18 @@ CREATE TABLE power_rates (
     measured      INTEGER NOT NULL
 );`,
 	},
+	{
+		name: "0003_spool_adjustments",
+		sql: `
+CREATE TABLE spool_adjustments (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    spool_id                INTEGER NOT NULL REFERENCES spools(id),
+    measured_grams          INTEGER NOT NULL,
+    delta_grams             INTEGER NOT NULL,
+    adjusted_on             TEXT    NOT NULL,
+    note                    TEXT    NOT NULL
+);`,
+	},
 }
 
 func (s *Store) migrate(ctx context.Context) error {
