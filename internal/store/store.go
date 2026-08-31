@@ -32,16 +32,19 @@ func Open(path string) (*Store, error) {
 	db.SetMaxOpenConns(1)
 
 	if err := db.PingContext(context.Background()); err != nil {
+		//nolint:errcheck
 		db.Close()
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
 
 	s := &Store{db: db}
 	if err := s.migrate(context.Background()); err != nil {
+		//nolint:errcheck
 		db.Close()
 		return nil, err
 	}
 	if err := s.seedSettings(context.Background()); err != nil {
+		//nolint:errcheck
 		db.Close()
 		return nil, err
 	}
@@ -70,8 +73,9 @@ func (s *Store) inTx(ctx context.Context, fn func(*Store) error) error {
 	if err != nil {
 		return err
 	}
+	//nolint:errcheck
+	defer tx.Rollback()
 	if err := fn(&Store{db: s.db, tx: tx}); err != nil {
-		tx.Rollback()
 		return err
 	}
 	return tx.Commit()

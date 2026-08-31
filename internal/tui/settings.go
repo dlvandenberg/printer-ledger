@@ -45,7 +45,7 @@ func (m settingsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	if m.form != nil {
 		return m.updateForm(msg)
 	}
-	if msg.String() == "e" {
+	if msg.String() == KeyE {
 		m.form = newSettingsForm(m.view)
 	}
 	return m, nil
@@ -53,10 +53,10 @@ func (m settingsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 
 func (m settingsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	switch msg.String() {
-	case "esc":
+	case KeyEsc:
 		m.form = nil
 		return m, nil
-	case "enter":
+	case KeyEnter:
 		if _, err := m.app.UpdateSettings(context.Background(), updateSettingsCmd(m.form)); err != nil {
 			var v *domain.ValidationError
 			if errors.As(err, &v) {
@@ -120,5 +120,5 @@ func (m settingsModel) Help() string {
 	if m.form != nil {
 		return m.form.Help()
 	}
-	return "e edit · " + globalHelp
+	return fmt.Sprintf("%s edit · %s", KeyE, globalHelp)
 }

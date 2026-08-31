@@ -56,17 +56,17 @@ func (m spoolsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	}
 
 	switch msg.String() {
-	case "a":
+	case KeyA:
 		m.form = newSpoolForm()
-	case "enter":
+	case KeyEnter:
 		if len(m.rows) > 0 {
 			m.openDetail(m.rows[m.cursor].ID)
 		}
-	case "up", "k":
+	case KeyUp, KeyK:
 		if m.cursor > 0 {
 			m.cursor--
 		}
-	case "down", "j":
+	case KeyDown, KeyJ:
 		if m.cursor < len(m.rows)-1 {
 			m.cursor++
 		}
@@ -76,9 +76,9 @@ func (m spoolsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 
 func (m spoolsModel) updateDetail(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	switch msg.String() {
-	case "esc":
+	case KeyEsc:
 		m.detail = nil
-	case "r":
+	case KeyR:
 		m.form = newReweighForm()
 	}
 	return m, nil
@@ -95,10 +95,10 @@ func (m *spoolsModel) openDetail(id int64) {
 
 func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	switch msg.String() {
-	case "esc":
+	case KeyEsc:
 		m.form = nil
 		return m, nil
-	case "enter":
+	case KeyEnter:
 		if err := m.submitForm(); err != nil {
 			var v *domain.ValidationError
 			if errors.As(err, &v) {
@@ -147,7 +147,7 @@ func (m spoolsModel) View() string {
 	b.WriteString(m.failure())
 
 	if len(m.rows) == 0 {
-		b.WriteString(placeholderStyle.Render("No spools yet. Press a to add one."))
+		b.WriteString(placeholderStyle.Render(fmt.Sprintf("No spools yet. Press %s to add one.", KeyA)))
 		return b.String()
 	}
 
@@ -179,9 +179,9 @@ func (m spoolsModel) Help() string {
 		return m.form.Help()
 	}
 	if m.detail != nil {
-		return "r re-weigh · esc back · " + globalHelp
+		return fmt.Sprintf("%s re-weigh · %s back · %s", KeyR, KeyEsc, globalHelp)
 	}
-	return "a add · enter detail · up/down move · " + globalHelp
+	return fmt.Sprintf("%s add · %s detail · %s/%s move · %s", KeyA, KeyEnter, KeyUp, KeyDown, globalHelp)
 }
 
 func truncate(s string, width int) string {

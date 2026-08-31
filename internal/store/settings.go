@@ -89,6 +89,7 @@ SELECT filament_type, kwh_per_hour, measured FROM power_rates ORDER BY filament_
 	if err != nil {
 		return nil, fmt.Errorf("read power rates: %w", err)
 	}
+	//nolint:errcheck
 	defer rows.Close()
 
 	var rates []domain.PowerRate

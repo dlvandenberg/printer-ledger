@@ -1,0 +1,41 @@
+version: "2"
+
+linters:
+  enable:
+    - asciicheck
+    - bidichk
+    - contextcheck
+    - copyloopvar
+    - decorder
+    - dogsled
+    - embeddedstructfieldcheck
+    - errcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - forcetypeassert
+    - gocognit
+    - goconst
+
+  settings:
+    cyclop:
+      max-complexity: 5
+      package-average: 0.5
+
+    decorder:
+      dec-order:
+        - type
+        - const
+        - var
+        - func
+
+    errcheck:
+      check-blank: true
+
+  exclusions:
+    rules:
+      - path: '(.+)_test\.go'
+        linters:
+          - gocognit
+          - goconst
+          - errcheck

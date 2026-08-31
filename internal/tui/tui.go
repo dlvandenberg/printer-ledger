@@ -58,18 +58,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		// Checked before the capture branch: a capturing tab swallows every
 		// other key, and the operator must always be able to quit.
-		if msg.String() == "ctrl+c" {
+		if msg.String() == KeyCtrlC {
 			return m, tea.Quit
 		}
 
 		if !m.current().CapturesInput() {
 			switch msg.String() {
-			case "q":
+			case KeyQ:
 				return m, tea.Quit
-			case "tab":
+			case KeyTab:
 				m.active = wrap(m.active, 1, len(m.tabs))
 				return m, nil
-			case "shift+tab":
+			case KeyShiftTab:
 				m.active = wrap(m.active, -1, len(m.tabs))
 				return m, nil
 			}

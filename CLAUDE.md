@@ -36,6 +36,17 @@ A test asserts on values a use case returns or on what a later query reports. It
 a struct field, never asserts on SQL, and never asserts on rendered terminal output. If moving the
 cost calculation between packages breaks a test that still produces €4.71, the test is wrong.
 
+## Before you call it done
+
+Run both from the repo root. Both must pass.
+
+```
+make lint
+make test
+```
+
+Never report an implementation complete on a red lint or a failing test.
+
 ## Conventions
 
 How the code is written — naming, validation, per-layer file shapes, comments, tests, commits,

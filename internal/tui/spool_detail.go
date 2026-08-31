@@ -23,7 +23,7 @@ func spoolDetailView(d app.SpoolDetailView) string {
 	b.WriteString(titleStyle.Render("Adjustments"))
 	b.WriteString("\n")
 	if len(d.Adjustments) == 0 {
-		b.WriteString(placeholderStyle.Render("None yet. Press r to re-weigh."))
+		b.WriteString(placeholderStyle.Render(fmt.Sprintf("None yet. Press %s to re-weigh.", KeyR)))
 		return b.String()
 	}
 

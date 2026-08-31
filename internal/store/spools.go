@@ -47,6 +47,7 @@ func (s *Store) SpoolLedgers(ctx context.Context) ([]domain.SpoolLedger, error) 
 	if err != nil {
 		return nil, fmt.Errorf("list spools: %w", err)
 	}
+	//nolint:errcheck
 	defer rows.Close()
 
 	var ledgers []domain.SpoolLedger
@@ -124,6 +125,7 @@ func (s *Store) SpoolAdjustments(ctx context.Context, spoolID int64) ([]domain.S
 	if err != nil {
 		return nil, fmt.Errorf("list adjustments of spool %d: %w", spoolID, err)
 	}
+	//nolint:errcheck
 	defer rows.Close()
 
 	var adjustments []domain.SpoolAdjustment

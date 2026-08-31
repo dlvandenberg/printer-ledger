@@ -89,20 +89,20 @@ func (f *form) applyFocus() {
 
 func (f *form) Update(msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
-	case "tab", "down":
+	case KeyTab, KeyDown:
 		f.focus = wrap(f.focus, 1, len(f.fields))
 		f.applyFocus()
 		return nil
-	case "shift+tab", "up":
+	case KeyShiftTab, KeyUp:
 		f.focus = wrap(f.focus, -1, len(f.fields))
 		f.applyFocus()
 		return nil
-	case "left":
+	case KeyLeft, KeyH:
 		if f.fields[f.focus].isChoice() {
 			f.cycle(-1)
 			return nil
 		}
-	case "right":
+	case KeyRight, KeyL:
 		if f.fields[f.focus].isChoice() {
 			f.cycle(1)
 			return nil
@@ -139,13 +139,13 @@ func (f *form) Value(key string) string {
 func (f *form) SetErrors(errs *domain.ValidationError) { f.errs = errs }
 
 func (f *form) Help() string {
-	keys := []string{"tab/shift-tab next field"}
+	keys := []string{fmt.Sprintf("%s/%s next/prev field", KeyTab, KeyShiftTab)}
 	for _, fld := range f.fields {
 		if fld.isChoice() {
-			keys = append(keys, "left/right "+strings.ToLower(fld.spec.Label))
+			keys = append(keys, fmt.Sprintf("%s/%s (or %s/%s) %s", KeyLeft, KeyRight, KeyH, KeyL, strings.ToLower(fld.spec.Label)))
 		}
 	}
-	keys = append(keys, "enter save", "esc cancel", "ctrl+c quit")
+	keys = append(keys, fmt.Sprintf("%s save · %s cancel · %s quit", KeyEnter, KeyEsc, KeyCtrlC))
 	return strings.Join(keys, " · ")
 }
 
