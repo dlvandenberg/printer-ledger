@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/dlvandenberg/printer-ledger/internal/app"
-	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 func spoolDetailView(d app.SpoolDetailView) string {
@@ -13,11 +13,11 @@ func spoolDetailView(d app.SpoolDetailView) string {
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n\n", titleStyle.Render(fmt.Sprintf("%s %s %s", spool.FilamentType, spool.Brand, spool.Color)))
-	fmt.Fprintf(&b, "  %-12s %10s\n", "Initial", domain.FormatGrams(spool.InitialGrams))
-	fmt.Fprintf(&b, "  %-12s %10s\n", "Printed", domain.FormatGrams(-spool.UsedGrams))
-	fmt.Fprintf(&b, "  %-12s %10s\n", "Adjusted", domain.FormatGrams(spool.AdjustedGrams))
-	fmt.Fprintf(&b, "  %-12s %10s  %s  %s\n", "Remaining", domain.FormatGrams(spool.RemainingGrams),
-		currency+domain.FormatCents(spool.RemainingValue), spool.State)
+	fmt.Fprintf(&b, "  %-12s %10s\n", "Initial", unit.FormatGrams(spool.InitialGrams))
+	fmt.Fprintf(&b, "  %-12s %10s\n", "Printed", unit.FormatGrams(-spool.UsedGrams))
+	fmt.Fprintf(&b, "  %-12s %10s\n", "Adjusted", unit.FormatGrams(spool.AdjustedGrams))
+	fmt.Fprintf(&b, "  %-12s %10s  %s  %s\n", "Remaining", unit.FormatGrams(spool.RemainingGrams),
+		currency+unit.FormatCents(spool.RemainingValue), spool.State)
 
 	b.WriteString("\n")
 	b.WriteString(titleStyle.Render("Adjustments"))
@@ -30,8 +30,8 @@ func spoolDetailView(d app.SpoolDetailView) string {
 	fmt.Fprintf(&b, "  %-10s  %10s  %10s  %8s  %s\n", "DATE", "MEASURED", "REMAINING", "DELTA", "NOTE")
 	for _, a := range d.Adjustments {
 		fmt.Fprintf(&b, "  %-10s  %10s  %10s  %8s  %s\n",
-			domain.FormatDate(a.AdjustedOn), domain.FormatGrams(a.MeasuredGrams),
-			domain.FormatGrams(a.DerivedRemaining), domain.FormatGrams(a.DeltaGrams), a.Note)
+			unit.FormatDate(a.AdjustedOn), unit.FormatGrams(a.MeasuredGrams),
+			unit.FormatGrams(a.DerivedRemaining), unit.FormatGrams(a.DeltaGrams), a.Note)
 	}
 	return b.String()
 }

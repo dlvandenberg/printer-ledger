@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 var _ domain.SettingsRepository = &Store{}
@@ -111,11 +112,11 @@ func scanSettings(row scanner) (domain.Settings, error) {
 		return domain.Settings{}, err
 	}
 	return domain.Settings{
-		KwhPrice:            domain.Cents(kwhPrice),
-		MachineHourlyRate:   domain.Cents(machineHourlyRate),
-		PrinterPurchaseCost: domain.Cents(printerPurchaseCost),
-		DefaultMargin:       domain.Percent(defaultMargin),
-		MinMargin:           domain.Percent(minMargin),
+		KwhPrice:            unit.Cents(kwhPrice),
+		MachineHourlyRate:   unit.Cents(machineHourlyRate),
+		PrinterPurchaseCost: unit.Cents(printerPurchaseCost),
+		DefaultMargin:       unit.Percent(defaultMargin),
+		MinMargin:           unit.Percent(minMargin),
 	}, nil
 }
 
@@ -130,7 +131,7 @@ func scanPowerRate(row scanner) (domain.PowerRate, error) {
 	}
 	return domain.PowerRate{
 		FilamentType: domain.FilamentType(filamentType),
-		KwhPerHour:   domain.KwhPerHour(kwhPerHour),
+		KwhPerHour:   unit.KwhPerHour(kwhPerHour),
 		Measured:     measured,
 	}, nil
 }

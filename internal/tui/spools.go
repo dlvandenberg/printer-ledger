@@ -10,6 +10,7 @@ import (
 
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 var _ tabModel = spoolsModel{}
@@ -159,8 +160,8 @@ func (m spoolsModel) View() string {
 		}
 		fmt.Fprintf(&b, "%s%-6s  %-14s  %-12s  %10s  %10s  %-7s\n",
 			marker, row.FilamentType, truncate(row.Brand, 14), truncate(row.Color, 12),
-			domain.FormatGrams(row.RemainingGrams),
-			currency+domain.FormatCents(row.RemainingValue),
+			unit.FormatGrams(row.RemainingGrams),
+			currency+unit.FormatCents(row.RemainingValue),
 			row.State)
 	}
 	return b.String()

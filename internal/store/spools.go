@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 const spoolLedgerQuery = `
@@ -29,7 +30,7 @@ INSERT INTO spools (filament_type, brand, color, initial_grams, tare_grams,
                     purchase_cost_cents, purchase_date)
 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		string(sp.FilamentType), sp.Brand, sp.Color, int64(sp.InitialGrams),
-		int64(sp.TareGrams), int64(sp.PurchaseCost), domain.FormatDate(sp.PurchaseDate))
+		int64(sp.TareGrams), int64(sp.PurchaseCost), unit.FormatDate(sp.PurchaseDate))
 	if err != nil {
 		return domain.Spool{}, fmt.Errorf("create spool: %w", err)
 	}
@@ -91,7 +92,7 @@ func scanSpoolLedger(row scanner) (domain.SpoolLedger, error) {
 		return domain.SpoolLedger{}, err
 	}
 	ledger.Spool.FilamentType = domain.FilamentType(filamentType)
-	if ledger.Spool.PurchaseDate, err = domain.ParseDate(purchaseDate); err != nil {
+	if ledger.Spool.PurchaseDate, err = unit.ParseDate(purchaseDate); err != nil {
 		return domain.SpoolLedger{}, err
 	}
 	return ledger, nil
@@ -103,7 +104,7 @@ INSERT INTO spool_adjustments (spool_id, measured_grams, delta_grams,
                                adjusted_on, note)
 VALUES (?, ?, ?, ?, ?)`,
 		a.SpoolID, int64(a.MeasuredGrams), int64(a.DeltaGrams),
-		domain.FormatDate(a.AdjustedOn), a.Note)
+		unit.FormatDate(a.AdjustedOn), a.Note)
 	if err != nil {
 		return domain.SpoolAdjustment{}, fmt.Errorf("re-weigh spool %d: %w", a.SpoolID, err)
 	}
@@ -148,7 +149,7 @@ func scanSpoolAdjustment(row scanner) (domain.SpoolAdjustment, error) {
 	if err != nil {
 		return domain.SpoolAdjustment{}, err
 	}
-	if adjustment.AdjustedOn, err = domain.ParseDate(adjustedOn); err != nil {
+	if adjustment.AdjustedOn, err = unit.ParseDate(adjustedOn); err != nil {
 		return domain.SpoolAdjustment{}, err
 	}
 	return adjustment, nil

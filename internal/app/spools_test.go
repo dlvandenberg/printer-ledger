@@ -7,6 +7,7 @@ import (
 
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 func TestAddSpoolThenList(t *testing.T) {
@@ -48,7 +49,7 @@ func TestAddSpoolThenList(t *testing.T) {
 		t.Errorf("PurchaseCost = %d, want 2200", got.PurchaseCost)
 	}
 	if !got.PurchaseDate.Equal(date(t, "2026-08-01")) {
-		t.Errorf("PurchaseDate = %s, want 2026-08-01", domain.FormatDate(got.PurchaseDate))
+		t.Errorf("PurchaseDate = %s, want 2026-08-01", unit.FormatDate(got.PurchaseDate))
 	}
 }
 
@@ -298,8 +299,8 @@ func TestAddSpoolReportsTheParseFailureNotTheInvariantItTrips(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected AddSpool to be rejected")
 	}
-	if msg := fieldError(t, err, domain.FieldInitialGrams); msg != domain.ErrMalformedGrams.Error() {
-		t.Errorf("initialGrams error = %q, want %q", msg, domain.ErrMalformedGrams)
+	if msg := fieldError(t, err, domain.FieldInitialGrams); msg != unit.ErrMalformedGrams.Error() {
+		t.Errorf("initialGrams error = %q, want %q", msg, unit.ErrMalformedGrams)
 	}
 }
 
@@ -333,7 +334,7 @@ func TestReweighSpoolDerivesRemainingFromTare(t *testing.T) {
 		t.Errorf("DeltaGrams = %d, want -600", got.DeltaGrams)
 	}
 	if !got.AdjustedOn.Equal(date(t, "2026-08-20")) {
-		t.Errorf("AdjustedOn = %s, want 2026-08-20", domain.FormatDate(got.AdjustedOn))
+		t.Errorf("AdjustedOn = %s, want 2026-08-20", unit.FormatDate(got.AdjustedOn))
 	}
 	if got.Note != "purge tower" {
 		t.Errorf("Note = %q, want %q", got.Note, "purge tower")
@@ -393,8 +394,8 @@ func TestSuccessiveReweighsProduceTheCorrectRemaining(t *testing.T) {
 
 	weights := []struct {
 		measured  string
-		remaining domain.Grams
-		delta     domain.Grams
+		remaining unit.Grams
+		delta     unit.Grams
 	}{
 		{"810", 600, -400},
 		{"560", 350, -250},

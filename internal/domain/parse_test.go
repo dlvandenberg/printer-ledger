@@ -3,13 +3,13 @@ package domain_test
 import (
 	"testing"
 
-	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 func TestParseCents(t *testing.T) {
 	tests := []struct {
 		in      string
-		want    domain.Cents
+		want    unit.Cents
 		wantErr bool
 	}{
 		{in: "22", want: 2200},
@@ -29,7 +29,7 @@ func TestParseCents(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		got, err := domain.ParseCents(tc.in)
+		got, err := unit.ParseCents(tc.in)
 		if tc.wantErr {
 			if err == nil {
 				t.Errorf("ParseCents(%q) = %d, want an error", tc.in, got)
@@ -48,7 +48,7 @@ func TestParseCents(t *testing.T) {
 
 func TestFormatCents(t *testing.T) {
 	tests := []struct {
-		in   domain.Cents
+		in   unit.Cents
 		want string
 	}{
 		{in: 2200, want: "22.00"},
@@ -59,7 +59,7 @@ func TestFormatCents(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		if got := domain.FormatCents(tc.in); got != tc.want {
+		if got := unit.FormatCents(tc.in); got != tc.want {
 			t.Errorf("FormatCents(%d) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
@@ -68,7 +68,7 @@ func TestFormatCents(t *testing.T) {
 func TestParseGrams(t *testing.T) {
 	tests := []struct {
 		in      string
-		want    domain.Grams
+		want    unit.Grams
 		wantErr bool
 	}{
 		{in: "1000", want: 1000},
@@ -82,7 +82,7 @@ func TestParseGrams(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		got, err := domain.ParseGrams(tc.in)
+		got, err := unit.ParseGrams(tc.in)
 		if tc.wantErr {
 			if err == nil {
 				t.Errorf("ParseGrams(%q) = %d, want an error", tc.in, got)
@@ -100,15 +100,15 @@ func TestParseGrams(t *testing.T) {
 }
 
 func TestParseDate(t *testing.T) {
-	got, err := domain.ParseDate("2026-08-01")
+	got, err := unit.ParseDate("2026-08-01")
 	if err != nil {
 		t.Fatalf("ParseDate: %v", err)
 	}
-	if domain.FormatDate(got) != "2026-08-01" {
-		t.Errorf("round trip = %q, want 2026-08-01", domain.FormatDate(got))
+	if unit.FormatDate(got) != "2026-08-01" {
+		t.Errorf("round trip = %q, want 2026-08-01", unit.FormatDate(got))
 	}
 	for _, in := range []string{"", "01-08-2026", "2026-13-01", "tomorrow"} {
-		if _, err := domain.ParseDate(in); err == nil {
+		if _, err := unit.ParseDate(in); err == nil {
 			t.Errorf("ParseDate(%q) = nil error, want an error", in)
 		}
 	}
@@ -117,7 +117,7 @@ func TestParseDate(t *testing.T) {
 func TestParsePercent(t *testing.T) {
 	tests := []struct {
 		in      string
-		want    domain.Percent
+		want    unit.Percent
 		wantErr bool
 	}{
 		{in: "50", want: 5000},
@@ -133,7 +133,7 @@ func TestParsePercent(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		got, err := domain.ParsePercent(tc.in)
+		got, err := unit.ParsePercent(tc.in)
 		if tc.wantErr {
 			if err == nil {
 				t.Errorf("ParsePercent(%q) = %d, want an error", tc.in, got)
@@ -152,7 +152,7 @@ func TestParsePercent(t *testing.T) {
 
 func TestFormatPercent(t *testing.T) {
 	tests := []struct {
-		in   domain.Percent
+		in   unit.Percent
 		want string
 	}{
 		{in: 5000, want: "50%"},
@@ -163,7 +163,7 @@ func TestFormatPercent(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		if got := domain.FormatPercent(tc.in); got != tc.want {
+		if got := unit.FormatPercent(tc.in); got != tc.want {
 			t.Errorf("FormatPercent(%d) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
@@ -172,7 +172,7 @@ func TestFormatPercent(t *testing.T) {
 func TestParseKwhPerHour(t *testing.T) {
 	tests := []struct {
 		in      string
-		want    domain.KwhPerHour
+		want    unit.KwhPerHour
 		wantErr bool
 	}{
 		{in: "0.09", want: 0.09},
@@ -186,7 +186,7 @@ func TestParseKwhPerHour(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		got, err := domain.ParseKwhPerHour(tc.in)
+		got, err := unit.ParseKwhPerHour(tc.in)
 		if tc.wantErr {
 			if err == nil {
 				t.Errorf("ParseKwhPerHour(%q) = %v, want an error", tc.in, got)
@@ -205,7 +205,7 @@ func TestParseKwhPerHour(t *testing.T) {
 
 func TestFormatKwhPerHour(t *testing.T) {
 	tests := []struct {
-		in   domain.KwhPerHour
+		in   unit.KwhPerHour
 		want string
 	}{
 		{in: 0.09, want: "0.09"},
@@ -214,7 +214,7 @@ func TestFormatKwhPerHour(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		if got := domain.FormatKwhPerHour(tc.in); got != tc.want {
+		if got := unit.FormatKwhPerHour(tc.in); got != tc.want {
 			t.Errorf("FormatKwhPerHour(%v) = %q, want %q", tc.in, got, tc.want)
 		}
 	}

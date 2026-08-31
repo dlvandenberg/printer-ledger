@@ -9,6 +9,7 @@ import (
 
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 	"github.com/dlvandenberg/printer-ledger/internal/store"
 )
 
@@ -29,7 +30,7 @@ func newAppAt(t *testing.T, path string) *app.App {
 
 func date(t *testing.T, s string) time.Time {
 	t.Helper()
-	d, err := domain.ParseDate(s)
+	d, err := unit.ParseDate(s)
 	if err != nil {
 		t.Fatalf("parse date %q: %v", s, err)
 	}
@@ -65,14 +66,14 @@ func settingsUpdate() app.UpdateSettingsCmd {
 	seeded := domain.DefaultSettings()
 	rates := map[domain.FilamentType]string{}
 	for _, rate := range seeded.PowerRates {
-		rates[rate.FilamentType] = domain.FormatKwhPerHour(rate.KwhPerHour)
+		rates[rate.FilamentType] = unit.FormatKwhPerHour(rate.KwhPerHour)
 	}
 	return app.UpdateSettingsCmd{
-		KwhPrice:            domain.FormatCents(seeded.KwhPrice),
-		MachineHourlyRate:   domain.FormatCents(seeded.MachineHourlyRate),
-		PrinterPurchaseCost: domain.FormatCents(seeded.PrinterPurchaseCost),
-		DefaultMargin:       domain.FormatPercent(seeded.DefaultMargin),
-		MinMargin:           domain.FormatPercent(seeded.MinMargin),
+		KwhPrice:            unit.FormatCents(seeded.KwhPrice),
+		MachineHourlyRate:   unit.FormatCents(seeded.MachineHourlyRate),
+		PrinterPurchaseCost: unit.FormatCents(seeded.PrinterPurchaseCost),
+		DefaultMargin:       unit.FormatPercent(seeded.DefaultMargin),
+		MinMargin:           unit.FormatPercent(seeded.MinMargin),
 		PowerRates:          rates,
 	}
 }

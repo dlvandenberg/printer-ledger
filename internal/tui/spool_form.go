@@ -3,6 +3,7 @@ package tui
 import (
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 func newSpoolForm() *form {
@@ -16,8 +17,8 @@ func newSpoolForm() *form {
 		{
 			Key:         domain.FieldPurchaseDate,
 			Label:       "Purchase date",
-			Placeholder: domain.DateLayout,
-			Prefill:     domain.FormatDate(domain.Today()),
+			Placeholder: unit.DateLayout,
+			Prefill:     unit.FormatDate(unit.Today()),
 		},
 	})
 }
@@ -40,8 +41,8 @@ func newReweighForm() *form {
 		{
 			Key:         domain.FieldAdjustedOn,
 			Label:       "Date",
-			Placeholder: domain.DateLayout,
-			Prefill:     domain.FormatDate(domain.Today()),
+			Placeholder: unit.DateLayout,
+			Prefill:     unit.FormatDate(unit.Today()),
 		},
 		{Key: domain.FieldNote, Label: "Note", Placeholder: "purge tower"},
 	})

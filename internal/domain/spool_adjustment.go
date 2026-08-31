@@ -3,6 +3,8 @@ package domain
 import (
 	"strings"
 	"time"
+
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 const (
@@ -14,17 +16,17 @@ const (
 type SpoolAdjustment struct {
 	ID            int64
 	SpoolID       int64
-	MeasuredGrams Grams
-	DeltaGrams    Grams
+	MeasuredGrams unit.Grams
+	DeltaGrams    unit.Grams
 	AdjustedOn    time.Time
 	Note          string
 }
 
-func (s SpoolAdjustment) DerivedRemaining(tareGrams Grams) Grams {
+func (s SpoolAdjustment) DerivedRemaining(tareGrams unit.Grams) unit.Grams {
 	return s.MeasuredGrams - tareGrams
 }
 
-func NewSpoolAdjustment(l SpoolLedger, measured Grams, on time.Time, note string) (SpoolAdjustment, error) {
+func NewSpoolAdjustment(l SpoolLedger, measured unit.Grams, on time.Time, note string) (SpoolAdjustment, error) {
 	note = strings.TrimSpace(note)
 
 	v := &ValidationError{}

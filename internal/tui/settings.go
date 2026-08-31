@@ -10,6 +10,7 @@ import (
 
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 var _ tabModel = settingsModel{}
@@ -87,13 +88,13 @@ func (m settingsModel) View() string {
 	b.WriteString(titleStyle.Render("Settings"))
 	b.WriteString("\n\n")
 
-	money := func(c domain.Cents) string { return currency + domain.FormatCents(c) }
+	money := func(c unit.Cents) string { return currency + unit.FormatCents(c) }
 	rows := [][2]string{
 		{"Electricity per kWh", money(m.view.KwhPrice)},
 		{"Machine per hour", money(m.view.MachineHourlyRate)},
 		{"Printer purchase cost", money(m.view.PrinterPurchaseCost)},
-		{"Default margin", domain.FormatPercent(m.view.DefaultMargin)},
-		{"Minimum margin", domain.FormatPercent(m.view.MinMargin)},
+		{"Default margin", unit.FormatPercent(m.view.DefaultMargin)},
+		{"Minimum margin", unit.FormatPercent(m.view.MinMargin)},
 	}
 	for _, row := range rows {
 		fmt.Fprintf(&b, "  %-*s%s\n", labelWidth, row[0], row[1])
@@ -103,7 +104,7 @@ func (m settingsModel) View() string {
 	fmt.Fprintf(&b, "  %-6s  %8s  %-8s\n", "TYPE", "KWH/H", "SOURCE")
 	for _, rate := range m.view.PowerRates {
 		fmt.Fprintf(&b, "  %-6s  %8s  %-8s\n",
-			rate.FilamentType, domain.FormatKwhPerHour(rate.KwhPerHour), rateSource(rate.Measured))
+			rate.FilamentType, unit.FormatKwhPerHour(rate.KwhPerHour), rateSource(rate.Measured))
 	}
 	return b.String()
 }

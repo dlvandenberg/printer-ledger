@@ -3,6 +3,8 @@ package domain
 import (
 	"strings"
 	"time"
+
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 const (
@@ -27,9 +29,9 @@ type Spool struct {
 	FilamentType FilamentType
 	Brand        string
 	Color        string
-	InitialGrams Grams
-	TareGrams    Grams
-	PurchaseCost Cents
+	InitialGrams unit.Grams
+	TareGrams    unit.Grams
+	PurchaseCost unit.Cents
 	PurchaseDate time.Time
 }
 
@@ -65,9 +67,9 @@ func NewSpool(s Spool) (Spool, error) {
 	return s, nil
 }
 
-func (s Spool) ValueOf(g Grams) Cents {
+func (s Spool) ValueOf(g unit.Grams) unit.Cents {
 	if s.InitialGrams <= 0 {
 		return 0
 	}
-	return Cents(int64(g) * int64(s.PurchaseCost) / int64(s.InitialGrams))
+	return unit.Cents(int64(g) * int64(s.PurchaseCost) / int64(s.InitialGrams))
 }

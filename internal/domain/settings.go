@@ -1,5 +1,7 @@
 package domain
 
+import "github.com/dlvandenberg/printer-ledger/internal/domain/unit"
+
 const (
 	FieldKwhPrice            = "kwhPrice"
 	FieldMachineHourlyRate   = "machineHourlyRate"
@@ -14,16 +16,16 @@ func FieldPowerRate(t FilamentType) string { return "powerRate." + t.String() }
 
 type PowerRate struct {
 	FilamentType FilamentType
-	KwhPerHour   KwhPerHour
+	KwhPerHour   unit.KwhPerHour
 	Measured     bool
 }
 
 type Settings struct {
-	KwhPrice            Cents
-	MachineHourlyRate   Cents
-	PrinterPurchaseCost Cents
-	DefaultMargin       Percent
-	MinMargin           Percent
+	KwhPrice            unit.Cents
+	MachineHourlyRate   unit.Cents
+	PrinterPurchaseCost unit.Cents
+	DefaultMargin       unit.Percent
+	MinMargin           unit.Percent
 	PowerRates          []PowerRate
 }
 
@@ -91,7 +93,7 @@ func (s Settings) PowerRate(t FilamentType) PowerRate {
 // WithPowerRate marks a rate measured as soon as its value moves off what the
 // ledger held, which is the only signal that the operator has put a smart plug
 // on the printer.
-func (s Settings) WithPowerRate(t FilamentType, k KwhPerHour) Settings {
+func (s Settings) WithPowerRate(t FilamentType, k unit.KwhPerHour) Settings {
 	current := s.PowerRate(t)
 	updated := PowerRate{FilamentType: t, KwhPerHour: k, Measured: current.Measured || k != current.KwhPerHour}
 

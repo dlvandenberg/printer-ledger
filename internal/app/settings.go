@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 type UpdateSettingsCmd struct {
@@ -17,17 +18,17 @@ type UpdateSettingsCmd struct {
 }
 
 type SettingsView struct {
-	KwhPrice            domain.Cents
-	MachineHourlyRate   domain.Cents
-	PrinterPurchaseCost domain.Cents
-	DefaultMargin       domain.Percent
-	MinMargin           domain.Percent
+	KwhPrice            unit.Cents
+	MachineHourlyRate   unit.Cents
+	PrinterPurchaseCost unit.Cents
+	DefaultMargin       unit.Percent
+	MinMargin           unit.Percent
 	PowerRates          []PowerRateView
 }
 
 type PowerRateView struct {
 	FilamentType domain.FilamentType
-	KwhPerHour   domain.KwhPerHour
+	KwhPerHour   unit.KwhPerHour
 	Measured     bool
 }
 
@@ -70,38 +71,38 @@ func parseUpdateSettings(cmd UpdateSettingsCmd, current domain.Settings) (domain
 	errs := &domain.ValidationError{}
 	settings := current
 
-	if cents, err := domain.ParseCents(cmd.KwhPrice); err != nil {
+	if cents, err := unit.ParseCents(cmd.KwhPrice); err != nil {
 		errs.Add(domain.FieldKwhPrice, err.Error())
 	} else {
 		settings.KwhPrice = cents
 	}
 
-	if cents, err := domain.ParseCents(cmd.MachineHourlyRate); err != nil {
+	if cents, err := unit.ParseCents(cmd.MachineHourlyRate); err != nil {
 		errs.Add(domain.FieldMachineHourlyRate, err.Error())
 	} else {
 		settings.MachineHourlyRate = cents
 	}
 
-	if cents, err := domain.ParseCents(cmd.PrinterPurchaseCost); err != nil {
+	if cents, err := unit.ParseCents(cmd.PrinterPurchaseCost); err != nil {
 		errs.Add(domain.FieldPrinterPurchaseCost, err.Error())
 	} else {
 		settings.PrinterPurchaseCost = cents
 	}
 
-	if pct, err := domain.ParsePercent(cmd.DefaultMargin); err != nil {
+	if pct, err := unit.ParsePercent(cmd.DefaultMargin); err != nil {
 		errs.Add(domain.FieldDefaultMargin, err.Error())
 	} else {
 		settings.DefaultMargin = pct
 	}
 
-	if pct, err := domain.ParsePercent(cmd.MinMargin); err != nil {
+	if pct, err := unit.ParsePercent(cmd.MinMargin); err != nil {
 		errs.Add(domain.FieldMinMargin, err.Error())
 	} else {
 		settings.MinMargin = pct
 	}
 
 	for _, filamentType := range domain.FilamentTypes() {
-		if rate, err := domain.ParseKwhPerHour(cmd.PowerRates[filamentType]); err != nil {
+		if rate, err := unit.ParseKwhPerHour(cmd.PowerRates[filamentType]); err != nil {
 			errs.Add(domain.FieldPowerRate(filamentType), err.Error())
 		} else {
 			settings = settings.WithPowerRate(filamentType, rate)

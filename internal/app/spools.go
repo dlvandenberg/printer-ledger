@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 // AddSpoolCmd carries what the operator typed. Parsing it is the use case's
@@ -32,14 +33,14 @@ type SpoolView struct {
 	FilamentType   domain.FilamentType
 	Brand          string
 	Color          string
-	InitialGrams   domain.Grams
-	TareGrams      domain.Grams
-	PurchaseCost   domain.Cents
+	InitialGrams   unit.Grams
+	TareGrams      unit.Grams
+	PurchaseCost   unit.Cents
 	PurchaseDate   time.Time
-	UsedGrams      domain.Grams
-	AdjustedGrams  domain.Grams
-	RemainingGrams domain.Grams
-	RemainingValue domain.Cents
+	UsedGrams      unit.Grams
+	AdjustedGrams  unit.Grams
+	RemainingGrams unit.Grams
+	RemainingValue unit.Cents
 	State          domain.SpoolState
 }
 
@@ -50,9 +51,9 @@ type SpoolDetailView struct {
 
 type SpoolAdjustmentView struct {
 	ID               int64
-	MeasuredGrams    domain.Grams
-	DerivedRemaining domain.Grams
-	DeltaGrams       domain.Grams
+	MeasuredGrams    unit.Grams
+	DerivedRemaining unit.Grams
+	DeltaGrams       unit.Grams
 	AdjustedOn       time.Time
 	Note             string
 }
@@ -156,20 +157,20 @@ func (a *App) ReweighSpool(ctx context.Context, cmd ReweighSpoolCmd) (SpoolDetai
 	return view, nil
 }
 
-func parseReweighSpool(cmd ReweighSpoolCmd) (domain.Grams, time.Time, error) {
+func parseReweighSpool(cmd ReweighSpoolCmd) (unit.Grams, time.Time, error) {
 	errs := &domain.ValidationError{}
 	var (
-		measured   domain.Grams
+		measured   unit.Grams
 		adjustedOn time.Time
 	)
 
-	if grams, err := domain.ParseGrams(cmd.MeasuredGrams); err != nil {
+	if grams, err := unit.ParseGrams(cmd.MeasuredGrams); err != nil {
 		errs.Add(domain.FieldMeasuredGrams, err.Error())
 	} else {
 		measured = grams
 	}
 
-	if date, err := domain.ParseDate(cmd.AdjustedOn); err != nil {
+	if date, err := unit.ParseDate(cmd.AdjustedOn); err != nil {
 		errs.Add(domain.FieldAdjustedOn, err.Error())
 	} else {
 		adjustedOn = date
@@ -194,25 +195,25 @@ func parseAddSpool(cmd AddSpoolCmd) (domain.Spool, error) {
 		spool.FilamentType = filamentType
 	}
 
-	if grams, err := domain.ParseGrams(cmd.InitialGrams); err != nil {
+	if grams, err := unit.ParseGrams(cmd.InitialGrams); err != nil {
 		errs.Add(domain.FieldInitialGrams, err.Error())
 	} else {
 		spool.InitialGrams = grams
 	}
 
-	if grams, err := domain.ParseGrams(cmd.TareGrams); err != nil {
+	if grams, err := unit.ParseGrams(cmd.TareGrams); err != nil {
 		errs.Add(domain.FieldTareGrams, err.Error())
 	} else {
 		spool.TareGrams = grams
 	}
 
-	if cents, err := domain.ParseCents(cmd.PurchaseCost); err != nil {
+	if cents, err := unit.ParseCents(cmd.PurchaseCost); err != nil {
 		errs.Add(domain.FieldPurchaseCost, err.Error())
 	} else {
 		spool.PurchaseCost = cents
 	}
 
-	if date, err := domain.ParseDate(cmd.PurchaseDate); err != nil {
+	if date, err := unit.ParseDate(cmd.PurchaseDate); err != nil {
 		errs.Add(domain.FieldPurchaseDate, err.Error())
 	} else {
 		spool.PurchaseDate = date

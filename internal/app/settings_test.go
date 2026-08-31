@@ -6,6 +6,7 @@ import (
 
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 func TestFreshLedgerIsSeededWithSettings(t *testing.T) {
@@ -271,7 +272,7 @@ func TestUpdateSettingsReportsTheParseFailureNotTheInvariantItTrips(t *testing.T
 	if err == nil {
 		t.Fatal("expected UpdateSettings to be rejected")
 	}
-	if msg := fieldError(t, err, domain.FieldKwhPrice); msg != domain.ErrMalformedMoney.Error() {
-		t.Errorf("kwhPrice error = %q, want %q", msg, domain.ErrMalformedMoney)
+	if msg := fieldError(t, err, domain.FieldKwhPrice); msg != unit.ErrMalformedMoney.Error() {
+		t.Errorf("kwhPrice error = %q, want %q", msg, unit.ErrMalformedMoney)
 	}
 }
