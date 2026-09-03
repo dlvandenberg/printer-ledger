@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
@@ -164,17 +163,8 @@ func parseReweighSpool(cmd ReweighSpoolCmd) (unit.Grams, time.Time, error) {
 		adjustedOn time.Time
 	)
 
-	if grams, err := unit.ParseGrams(cmd.MeasuredGrams); err != nil {
-		errs.Add(domain.FieldMeasuredGrams, err.Error())
-	} else {
-		measured = grams
-	}
-
-	if date, err := unit.ParseDate(cmd.AdjustedOn); err != nil {
-		errs.Add(domain.FieldAdjustedOn, err.Error())
-	} else {
-		adjustedOn = date
-	}
+	measured = parseField(errs, domain.FieldMeasuredGrams, cmd.MeasuredGrams, unit.ParseGrams)
+	adjustedOn = parseField(errs, domain.FieldAdjustedOn, cmd.AdjustedOn, unit.ParseDate)
 
 	if err := errs.OrNil(); err != nil {
 		return 0, time.Time{}, err
@@ -185,52 +175,16 @@ func parseReweighSpool(cmd ReweighSpoolCmd) (unit.Grams, time.Time, error) {
 func parseAddSpool(cmd AddSpoolCmd) (domain.Spool, error) {
 	errs := &domain.ValidationError{}
 	spool := domain.Spool{
-		Brand: cmd.Brand,
-		Color: cmd.Color,
+		Brand:        cmd.Brand,
+		Color:        cmd.Color,
+		FilamentType: parseField(errs, domain.FieldFilamentType, cmd.FilamentType, domain.ParseFilamentType),
+		InitialGrams: parseField(errs, domain.FieldInitialGrams, cmd.InitialGrams, unit.ParseGrams),
+		TareGrams:    parseField(errs, domain.FieldTareGrams, cmd.TareGrams, unit.ParseGrams),
+		PurchaseCost: parseField(errs, domain.FieldPurchaseCost, cmd.PurchaseCost, unit.ParseCents),
+		PurchaseDate: parseField(errs, domain.FieldPurchaseDate, cmd.PurchaseDate, unit.ParseDate),
 	}
 
-	if filamentType, err := domain.ParseFilamentType(cmd.FilamentType); err != nil {
-		errs.Add(domain.FieldFilamentType, err.Error())
-	} else {
-		spool.FilamentType = filamentType
-	}
-
-	if grams, err := unit.ParseGrams(cmd.InitialGrams); err != nil {
-		errs.Add(domain.FieldInitialGrams, err.Error())
-	} else {
-		spool.InitialGrams = grams
-	}
-
-	if grams, err := unit.ParseGrams(cmd.TareGrams); err != nil {
-		errs.Add(domain.FieldTareGrams, err.Error())
-	} else {
-		spool.TareGrams = grams
-	}
-
-	if cents, err := unit.ParseCents(cmd.PurchaseCost); err != nil {
-		errs.Add(domain.FieldPurchaseCost, err.Error())
-	} else {
-		spool.PurchaseCost = cents
-	}
-
-	if date, err := unit.ParseDate(cmd.PurchaseDate); err != nil {
-		errs.Add(domain.FieldPurchaseDate, err.Error())
-	} else {
-		spool.PurchaseDate = date
-	}
-
-	valid, err := domain.NewSpool(spool)
-	if err != nil {
-		var invariants *domain.ValidationError
-		if !errors.As(err, &invariants) {
-			return domain.Spool{}, err
-		}
-		errs.MergeMissing(invariants)
-	}
-	if err := errs.OrNil(); err != nil {
-		return domain.Spool{}, err
-	}
-	return valid, nil
+	return validate(spool, errs, domain.NewSpool)
 }
 
 func toSpoolView(l domain.SpoolLedger) SpoolView {

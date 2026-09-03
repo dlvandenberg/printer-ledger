@@ -33,6 +33,7 @@ type fieldSpec struct {
 	Choices     []string
 	Placeholder string
 	Prefill     string
+	Choice      string
 }
 
 type field struct {
@@ -65,6 +66,12 @@ func newForm(title string, specs []fieldSpec) *form {
 			in.CharLimit = fieldCharLimit
 			in.Width = fieldWidth
 			f.input = in
+		} else {
+			for i, choice := range spec.Choices {
+				if choice == spec.Choice {
+					f.choice = i
+				}
+			}
 		}
 		fields = append(fields, f)
 	}

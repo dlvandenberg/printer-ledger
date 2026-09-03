@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
@@ -70,36 +69,11 @@ func (a *App) UpdateSettings(ctx context.Context, cmd UpdateSettingsCmd) (Settin
 func parseUpdateSettings(cmd UpdateSettingsCmd, current domain.Settings) (domain.Settings, error) {
 	errs := &domain.ValidationError{}
 	settings := current
-
-	if cents, err := unit.ParseCents(cmd.KwhPrice); err != nil {
-		errs.Add(domain.FieldKwhPrice, err.Error())
-	} else {
-		settings.KwhPrice = cents
-	}
-
-	if cents, err := unit.ParseCents(cmd.MachineHourlyRate); err != nil {
-		errs.Add(domain.FieldMachineHourlyRate, err.Error())
-	} else {
-		settings.MachineHourlyRate = cents
-	}
-
-	if cents, err := unit.ParseCents(cmd.PrinterPurchaseCost); err != nil {
-		errs.Add(domain.FieldPrinterPurchaseCost, err.Error())
-	} else {
-		settings.PrinterPurchaseCost = cents
-	}
-
-	if pct, err := unit.ParsePercent(cmd.DefaultMargin); err != nil {
-		errs.Add(domain.FieldDefaultMargin, err.Error())
-	} else {
-		settings.DefaultMargin = pct
-	}
-
-	if pct, err := unit.ParsePercent(cmd.MinMargin); err != nil {
-		errs.Add(domain.FieldMinMargin, err.Error())
-	} else {
-		settings.MinMargin = pct
-	}
+	settings.KwhPrice = parseField(errs, domain.FieldKwhPrice, cmd.KwhPrice, unit.ParseCents)
+	settings.MachineHourlyRate = parseField(errs, domain.FieldMachineHourlyRate, cmd.MachineHourlyRate, unit.ParseCents)
+	settings.PrinterPurchaseCost = parseField(errs, domain.FieldPrinterPurchaseCost, cmd.PrinterPurchaseCost, unit.ParseCents)
+	settings.DefaultMargin = parseField(errs, domain.FieldDefaultMargin, cmd.DefaultMargin, unit.ParsePercent)
+	settings.MinMargin = parseField(errs, domain.FieldMinMargin, cmd.MinMargin, unit.ParsePercent)
 
 	for _, filamentType := range domain.FilamentTypes() {
 		if rate, err := unit.ParseKwhPerHour(cmd.PowerRates[filamentType]); err != nil {
@@ -109,18 +83,7 @@ func parseUpdateSettings(cmd UpdateSettingsCmd, current domain.Settings) (domain
 		}
 	}
 
-	valid, err := domain.NewSettings(settings)
-	if err != nil {
-		var invariants *domain.ValidationError
-		if !errors.As(err, &invariants) {
-			return domain.Settings{}, err
-		}
-		errs.MergeMissing(invariants)
-	}
-	if err := errs.OrNil(); err != nil {
-		return domain.Settings{}, err
-	}
-	return valid, nil
+	return validate(settings, errs, domain.NewSettings)
 }
 
 func toSettingsView(s domain.Settings) SettingsView {

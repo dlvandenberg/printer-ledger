@@ -45,6 +45,12 @@ func ParseTime(s string) (Minutes, error) {
 	return Minutes(value), nil
 }
 
+func FormatHHmm(m Minutes) string {
+	minutes := m % MIN_IN_HOUR
+	hours := (m - minutes) / MIN_IN_HOUR
+	return fmt.Sprintf("%d:%02d", hours, minutes)
+}
+
 func FormatMinutes(m Minutes) string {
 	minutes := m % MIN_IN_HOUR
 	hours := (m - minutes) / MIN_IN_HOUR

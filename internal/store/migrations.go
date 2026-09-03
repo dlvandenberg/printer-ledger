@@ -55,6 +55,18 @@ CREATE TABLE spool_adjustments (
     note                    TEXT    NOT NULL
 );`,
 	},
+	{
+		name: "0004_designs",
+		sql: `
+CREATE TABLE designs (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                  TEXT NOT NULL,
+    default_filament_type TEXT NOT NULL,
+    estimated_grams       INTEGER NOT NULL,
+    estimated_minutes     INTEGER NOT NULL,
+    margin_hundredths     INTEGER NOT NULL
+);`,
+	},
 }
 
 func (s *Store) migrate(ctx context.Context) error {
@@ -72,15 +84,15 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 	if err != nil {
 		return fmt.Errorf("read schema_migrations: %w", err)
 	}
+	//nolint:errcheck
+	defer rows.Close()
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			rows.Close()
 			return fmt.Errorf("read schema_migrations: %w", err)
 		}
 		applied[name] = true
 	}
-	rows.Close()
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("read schema_migrations: %w", err)
 	}

@@ -183,14 +183,3 @@ func (m spoolsModel) Help() string {
 	}
 	return fmt.Sprintf("%s add · %s detail · %s/%s move · %s", KeyA, KeyEnter, KeyUp, KeyDown, globalHelp)
 }
-
-func truncate(s string, width int) string {
-	r := []rune(s)
-	if len(r) <= width {
-		return s
-	}
-	if width <= 1 {
-		return string(r[:width])
-	}
-	return string(r[:width-1]) + "…"
-}

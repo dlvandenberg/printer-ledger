@@ -1,0 +1,165 @@
+package tui
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/dlvandenberg/printer-ledger/internal/app"
+	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
+)
+
+var _ tabModel = designsModel{}
+
+type designsModel struct {
+	app     *app.App
+	rows    []app.DesignView
+	editing *app.DesignView
+	cursor  int
+	form    *form
+	loadErr error
+}
+
+func newDesignsModel(a *app.App) (designsModel, error) {
+	m := designsModel{
+		app: a,
+	}
+	if err := m.reload(); err != nil {
+		return m, err
+	}
+	return m, nil
+}
+
+func (m *designsModel) reload() error {
+	rows, err := m.app.ListDesigns(context.Background())
+	if err != nil {
+		return err
+	}
+	m.rows = rows
+	if m.cursor >= len(rows) {
+		m.cursor = max(0, len(rows)-1)
+	}
+	return nil
+}
+
+func (m designsModel) Help() string {
+	if m.form != nil {
+		return m.form.Help()
+	}
+	var editHelp string
+	if len(m.rows) > 0 {
+		editHelp = fmt.Sprintf(" · %s edit", KeyE)
+	}
+	return fmt.Sprintf("%s add%s · %s/%s move · %s", KeyA, editHelp, KeyDown, KeyUp, globalHelp)
+}
+
+func (m designsModel) View() string {
+	if m.form != nil {
+		return m.failure() + m.form.View()
+	}
+
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("Designs"))
+	b.WriteString("\n\n")
+	b.WriteString(m.failure())
+
+	if len(m.rows) == 0 {
+		b.WriteString(placeholderStyle.Render(fmt.Sprintf("No designs yet. Press %s to add one.", KeyA)))
+		return b.String()
+	}
+
+	fmt.Fprintf(&b, "  %-16s  %12s  %16s  %15s  %-7s\n",
+		"NAME", "DEFAULT TYPE", "ESTIMATED GRAMS", "ESTIMATED TIME", "MARGIN")
+
+	for i, row := range m.rows {
+		marker := "  "
+		if i == m.cursor {
+			marker = "> "
+		}
+		fmt.Fprintf(&b, "%s%-16s  %-12s  %-16s  %-15s  %-7s\n",
+			marker, truncate(row.Name, 16), row.DefaultFilamentType, unit.FormatGrams(row.EstimatedGrams), unit.FormatMinutes(row.EstimatedMinutes), unit.FormatPercent(row.MarginPct))
+	}
+
+	return b.String()
+}
+
+func (m designsModel) CapturesInput() bool {
+	return m.form != nil
+}
+
+func (m designsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	if m.form != nil {
+		return m.updateForm(msg)
+	}
+
+	switch msg.String() {
+	case KeyA:
+		settings, err := m.app.Settings(context.Background())
+		if err != nil {
+			m.loadErr = err
+			return m, nil
+		}
+		m.form = newDesignForm(settings.DefaultMargin)
+		m.editing = nil
+	case KeyUp, KeyK:
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case KeyE:
+		if len(m.rows) > 0 {
+			row := m.rows[m.cursor]
+			m.editing = &row
+			m.form = editDesignForm(row)
+		}
+	case KeyDown, KeyJ:
+		if m.cursor < len(m.rows)-1 {
+			m.cursor++
+		}
+	}
+	return m, nil
+}
+
+func (m designsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	switch msg.String() {
+	case KeyEsc:
+		m.form = nil
+		m.editing = nil
+		return m, nil
+	case KeyEnter:
+		if err := m.submitForm(); err != nil {
+			var v *domain.ValidationError
+			if errors.As(err, &v) {
+				m.form.SetErrors(v)
+				return m, nil
+			}
+			m.loadErr = err
+			return m, nil
+		}
+		m.form = nil
+		m.editing = nil
+		if err := m.reload(); err != nil {
+			m.loadErr = err
+		}
+		return m, nil
+	}
+	return m, m.form.Update(msg)
+}
+
+func (m designsModel) submitForm() error {
+	if m.editing != nil {
+		_, err := m.app.EditDesign(context.Background(), editDesignCmd(m.form, m.editing.ID))
+		return err
+	}
+	_, err := m.app.AddDesign(context.Background(), addDesignCmd(m.form))
+	return err
+}
+
+func (m designsModel) failure() string {
+	if m.loadErr == nil {
+		return ""
+	}
+	return errorStyle.Render(m.loadErr.Error()) + "\n\n"
+}

@@ -17,11 +17,11 @@ screen.
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Add, edit and list Designs, each with name, per-copy estimated grams, per-copy estimated minutes, default Filament Type and margin
-- [ ] Print time is entered as `HH:MM`, stored as whole minutes, and displayed as `5h 31m`
-- [ ] A new Design's margin is seeded from the Settings default without the operator typing it
-- [ ] Changing the Settings default afterwards leaves existing Designs untouched
-- [ ] A Design's margin can be edited independently
-- [ ] Validation errors render inline; rejected submits keep what was typed
+- [x] Add, edit and list Designs, each with name, per-copy estimated grams, per-copy estimated minutes, default Filament Type and margin
+- [x] Print time is entered as `HH:MM`, stored as whole minutes, and displayed as `5h 31m`
+- [x] A new Design's margin is seeded from the Settings default without the operator typing it
+- [x] Changing the Settings default afterwards leaves existing Designs untouched
+- [x] A Design's margin can be edited independently
+- [x] Validation errors render inline; rejected submits keep what was typed

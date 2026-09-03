@@ -15,6 +15,13 @@ type SpoolRepository interface {
 	SpoolAdjustments(ctx context.Context, spoolID int64) ([]SpoolAdjustment, error)
 }
 
+type DesignRepository interface {
+	CreateDesign(ctx context.Context, d Design) (Design, error)
+	UpdateDesign(ctx context.Context, d Design) (Design, error)
+	Designs(ctx context.Context) ([]Design, error)
+	Design(ctx context.Context, id int64) (Design, error)
+}
+
 type SettingsRepository interface {
 	Settings(ctx context.Context) (Settings, error)
 	SaveSettings(ctx context.Context, s Settings) error
@@ -23,5 +30,6 @@ type SettingsRepository interface {
 type Database interface {
 	SpoolRepository
 	SettingsRepository
+	DesignRepository
 	InTx(ctx context.Context, fn func(Database) error) error
 }

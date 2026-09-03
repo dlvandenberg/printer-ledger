@@ -97,3 +97,35 @@ func reweigh(spoolID int64, measured string) app.ReweighSpoolCmd {
 		Note:          "purge tower",
 	}
 }
+
+func plaDesign() app.AddDesignCmd {
+	return app.AddDesignCmd{
+		Name:                "Cable clip",
+		EstimatedGrams:      "48",
+		EstimatedMinutes:    "5:31",
+		DefaultFilamentType: domain.PLA.String(),
+		MarginPct:           "",
+	}
+}
+
+func editOf(d app.DesignView) app.EditDesignCmd {
+	return app.EditDesignCmd{
+		DesignID:            d.ID,
+		Name:                d.Name,
+		EstimatedGrams:      unit.FormatGrams(d.EstimatedGrams),
+		EstimatedMinutes:    unit.FormatHHmm(d.EstimatedMinutes),
+		DefaultFilamentType: d.DefaultFilamentType.String(),
+		MarginPct:           unit.FormatPercent(d.MarginPct),
+	}
+}
+
+func designNamed(t *testing.T, designs []app.DesignView, name string) app.DesignView {
+	t.Helper()
+	for _, d := range designs {
+		if d.Name == name {
+			return d
+		}
+	}
+	t.Fatalf("no design named %q", name)
+	return app.DesignView{}
+}
