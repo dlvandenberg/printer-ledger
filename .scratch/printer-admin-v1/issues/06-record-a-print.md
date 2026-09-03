@@ -25,18 +25,33 @@ exactly — a PLA spool at €22.00 per 1000g, a print of 120g over 5h30m at qua
 
 **Blocked by:** 03, 04
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Record a Print against a Design with quantity, `HH:MM` actual time, and one filament usage row
-- [ ] The form prefills grams and minutes as the Design's per-copy estimates times the quantity
-- [ ] The cost breakdown and per-copy cost update live as fields change
-- [ ] The Print stores its own electricity price, power rate and machine rate at creation
-- [ ] The usage row stores the spool's price per gram at creation
-- [ ] Editing Settings afterwards does not change the Print's cost; a Print recorded later uses the new rates
-- [ ] Editing the source spool's purchase price afterwards does not change the Print's cost; a later Print uses the corrected price
-- [ ] The spool's remaining drops by the grams used
-- [ ] Requesting more grams than the spool holds is rejected inline, naming what is actually left
-- [ ] Quantity must be at least one
-- [ ] Prints can be backdated
-- [ ] The reference case above is pinned exactly by a test
-- [ ] The Print screen shows no suggested price
+- [x] Record a Print against a Design with quantity, `HH:MM` actual time, and one filament usage row
+- [x] The form prefills grams and minutes as the Design's per-copy estimates times the quantity
+- [x] The cost breakdown and per-copy cost update live as fields change
+- [x] The Print stores its own electricity price, power rate and machine rate at creation
+- [x] The usage row stores the spool's price per gram at creation
+- [x] Editing Settings afterwards does not change the Print's cost; a Print recorded later uses the new rates
+- [x] Editing the source spool's purchase price afterwards does not change the Print's cost; a later Print uses the corrected price
+- [x] The spool's remaining drops by the grams used
+- [x] Requesting more grams than the spool holds is rejected inline, naming what is actually left
+- [x] Quantity must be at least one
+- [x] Prints can be backdated
+- [x] The reference case above is pinned exactly by a test
+- [x] The Print screen shows no suggested price
+
+## Comments
+
+Implemented. `unit.CentsPerGram` (hundredths of a cent per gram) holds the frozen gram price: a
+whole cent cannot express €22.00 / 1000g, and the reference case needs 2.2c/g exactly. Filament cost
+sums in hundredths and rounds once.
+
+`app.EditSpool` was added here as a dependency: the checklist item about correcting a spool's
+purchase price is unobservable at the use-case seam without an edit path, and no ticket owns spool
+editing (spec stories 21 and 22 are unassigned). It has no TUI yet — that remains open work for a
+ticket of its own.
+
+The one-type rule (ADR-0012 as narrowed) is not implemented: with one usage row it is unreachable.
+`Print.filamentType` takes the first row that names a spool on the shelf, which is where 07 hangs
+its rejection.

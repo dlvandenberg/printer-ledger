@@ -168,3 +168,69 @@ func hasQuoteRow(q app.DesignQuoteView, ft domain.FilamentType) bool {
 	}
 	return false
 }
+
+func addedSpool(t *testing.T, a *app.App, cmd app.AddSpoolCmd) app.SpoolView {
+	t.Helper()
+	spool, err := a.AddSpool(ctx(), cmd)
+	if err != nil {
+		t.Fatalf("AddSpool: %v", err)
+	}
+	return spool
+}
+
+func addedDesign(t *testing.T, a *app.App, cmd app.AddDesignCmd) app.DesignView {
+	t.Helper()
+	design, err := a.AddDesign(ctx(), cmd)
+	if err != nil {
+		t.Fatalf("AddDesign: %v", err)
+	}
+	return design
+}
+
+func editOfSpool(s app.SpoolView) app.EditSpoolCmd {
+	return app.EditSpoolCmd{
+		SpoolID:      s.ID,
+		FilamentType: s.FilamentType.String(),
+		Brand:        s.Brand,
+		Color:        s.Color,
+		InitialGrams: unit.FormatGrams(s.InitialGrams),
+		TareGrams:    unit.FormatGrams(s.TareGrams),
+		PurchaseCost: unit.FormatCents(s.PurchaseCost),
+		PurchaseDate: unit.FormatDate(s.PurchaseDate),
+	}
+}
+
+// printOf is the reference case of CONTEXT.md: 120g over 5h30m at quantity 2.
+func printOf(designID, spoolID int64) app.RecordPrintCmd {
+	return app.RecordPrintCmd{
+		DesignID: designID,
+		Date:     "2026-08-20",
+		Quantity: "2",
+		Minutes:  "5:30",
+		Usages:   []app.FilamentUsageCmd{{SpoolID: spoolID, Grams: "120"}},
+	}
+}
+
+func printByID(t *testing.T, a *app.App, id int64) app.PrintView {
+	t.Helper()
+	prints, err := a.ListPrints(ctx())
+	if err != nil {
+		t.Fatalf("ListPrints: %v", err)
+	}
+	for _, p := range prints {
+		if p.ID == id {
+			return p
+		}
+	}
+	t.Fatalf("no print %d", id)
+	return app.PrintView{}
+}
+
+func remainingOf(t *testing.T, a *app.App, spoolID int64) unit.Grams {
+	t.Helper()
+	detail, err := a.SpoolDetail(ctx(), spoolID)
+	if err != nil {
+		t.Fatalf("SpoolDetail: %v", err)
+	}
+	return detail.Spool.RemainingGrams
+}

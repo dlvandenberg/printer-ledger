@@ -67,6 +67,31 @@ CREATE TABLE designs (
     margin_hundredths     INTEGER NOT NULL
 );`,
 	},
+	{
+		name: "0005_prints",
+		sql: `
+CREATE TABLE prints (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    design_id                INTEGER NOT NULL REFERENCES designs(id),
+    date                     TEXT    NOT NULL,
+    quantity                 INTEGER NOT NULL,
+    minutes                  INTEGER NOT NULL,
+    kwh_price_cents          INTEGER NOT NULL,
+    kwh_per_hour             REAL    NOT NULL,
+    machine_rate_cents       INTEGER NOT NULL
+);
+
+CREATE TABLE filament_usages (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    print_id                 INTEGER NOT NULL REFERENCES prints(id) ON DELETE CASCADE,
+    spool_id                 INTEGER NOT NULL REFERENCES spools(id),
+    grams                    INTEGER NOT NULL,
+    cost_per_gram_hundredths INTEGER NOT NULL
+);
+
+CREATE INDEX filament_usages_spool ON filament_usages(spool_id);
+CREATE INDEX filament_usages_print ON filament_usages(print_id);`,
+	},
 }
 
 func (s *Store) migrate(ctx context.Context) error {

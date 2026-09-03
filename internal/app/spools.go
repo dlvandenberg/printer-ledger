@@ -20,6 +20,17 @@ type AddSpoolCmd struct {
 	PurchaseDate string
 }
 
+type EditSpoolCmd struct {
+	SpoolID      int64
+	FilamentType string
+	Brand        string
+	Color        string
+	InitialGrams string
+	TareGrams    string
+	PurchaseCost string
+	PurchaseDate string
+}
+
 type ReweighSpoolCmd struct {
 	SpoolID       int64
 	MeasuredGrams string
@@ -70,6 +81,36 @@ func (a *App) AddSpool(ctx context.Context, cmd AddSpoolCmd) (SpoolView, error) 
 			return err
 		}
 		ledger, err := tx.SpoolLedger(ctx, created.ID)
+		if err != nil {
+			return err
+		}
+		view = toSpoolView(ledger)
+		return nil
+	})
+	if err != nil {
+		return SpoolView{}, err
+	}
+	return view, nil
+}
+
+// EditSpool corrects a Spool that was entered wrongly. Prints already recorded
+// keep the gram price they froze, so a corrected price applies to later prints
+// only (ADR-0004).
+func (a *App) EditSpool(ctx context.Context, cmd EditSpoolCmd) (SpoolView, error) {
+	spool, err := parseEditSpool(cmd)
+	if err != nil {
+		return SpoolView{}, err
+	}
+
+	var view SpoolView
+	err = a.db.InTx(ctx, func(tx domain.Database) error {
+		if _, err := tx.SpoolLedger(ctx, cmd.SpoolID); err != nil {
+			return err
+		}
+		if _, err := tx.UpdateSpool(ctx, spool); err != nil {
+			return err
+		}
+		ledger, err := tx.SpoolLedger(ctx, cmd.SpoolID)
 		if err != nil {
 			return err
 		}
@@ -175,6 +216,22 @@ func parseReweighSpool(cmd ReweighSpoolCmd) (unit.Grams, time.Time, error) {
 func parseAddSpool(cmd AddSpoolCmd) (domain.Spool, error) {
 	errs := &domain.ValidationError{}
 	spool := domain.Spool{
+		Brand:        cmd.Brand,
+		Color:        cmd.Color,
+		FilamentType: parseField(errs, domain.FieldFilamentType, cmd.FilamentType, domain.ParseFilamentType),
+		InitialGrams: parseField(errs, domain.FieldInitialGrams, cmd.InitialGrams, unit.ParseGrams),
+		TareGrams:    parseField(errs, domain.FieldTareGrams, cmd.TareGrams, unit.ParseGrams),
+		PurchaseCost: parseField(errs, domain.FieldPurchaseCost, cmd.PurchaseCost, unit.ParseCents),
+		PurchaseDate: parseField(errs, domain.FieldPurchaseDate, cmd.PurchaseDate, unit.ParseDate),
+	}
+
+	return validate(spool, errs, domain.NewSpool)
+}
+
+func parseEditSpool(cmd EditSpoolCmd) (domain.Spool, error) {
+	errs := &domain.ValidationError{}
+	spool := domain.Spool{
+		ID:           cmd.SpoolID,
 		Brand:        cmd.Brand,
 		Color:        cmd.Color,
 		FilamentType: parseField(errs, domain.FieldFilamentType, cmd.FilamentType, domain.ParseFilamentType),

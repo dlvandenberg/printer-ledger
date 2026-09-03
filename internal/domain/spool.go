@@ -83,6 +83,15 @@ func (s Spool) QuotedValueOf(g unit.Grams) unit.Cents {
 	return unit.Cents(ceilDiv(int64(g)*int64(s.PurchaseCost), int64(s.InitialGrams)))
 }
 
+// GramPrice is what one gram of this spool's filament cost, at the precision a
+// Print freezes it: a €22.00 spool of 1000g is 2.2c/g.
+func (s Spool) GramPrice() unit.CentsPerGram {
+	if s.InitialGrams <= 0 {
+		return 0
+	}
+	return unit.CentsPerGram(roundDiv(int64(s.PurchaseCost)*unit.GramPriceScale, int64(s.InitialGrams)))
+}
+
 // PricierPerGramThan compares the two ratios by cross-multiplying, so the
 // truncation in ValueOf cannot decide which spool sets a quote.
 func (s Spool) PricierPerGramThan(o Spool) bool {

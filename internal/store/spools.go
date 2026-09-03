@@ -13,7 +13,7 @@ import (
 const spoolLedgerQuery = `
 SELECT s.id, s.filament_type, s.brand, s.color, s.initial_grams, s.tare_grams,
        s.purchase_cost_cents, s.purchase_date,
-       0 AS used_grams,
+       COALESCE((SELECT SUM(u.grams) FROM filament_usages u WHERE u.spool_id = s.id), 0) AS used_grams,
        COALESCE((SELECT SUM(a.delta_grams) FROM spool_adjustments a WHERE a.spool_id = s.id), 0) AS adjusted_grams
 FROM spools s`
 
@@ -39,6 +39,32 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		return domain.Spool{}, fmt.Errorf("create spool: %w", err)
 	}
 	sp.ID = id
+	return sp, nil
+}
+
+func (s *Store) UpdateSpool(ctx context.Context, sp domain.Spool) (domain.Spool, error) {
+	res, err := s.q().ExecContext(ctx, `
+UPDATE spools
+   SET filament_type       = ?,
+       brand               = ?,
+       color               = ?,
+       initial_grams       = ?,
+       tare_grams          = ?,
+       purchase_cost_cents = ?,
+       purchase_date       = ?
+ WHERE id = ?`,
+		string(sp.FilamentType), sp.Brand, sp.Color, int64(sp.InitialGrams),
+		int64(sp.TareGrams), int64(sp.PurchaseCost), unit.FormatDate(sp.PurchaseDate), sp.ID)
+	if err != nil {
+		return domain.Spool{}, fmt.Errorf("edit spool %d: %w", sp.ID, err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return domain.Spool{}, fmt.Errorf("edit spool %d: %w", sp.ID, err)
+	}
+	if affected == 0 {
+		return domain.Spool{}, fmt.Errorf("spool %d: %w", sp.ID, domain.ErrNotFound)
+	}
 	return sp, nil
 }
 

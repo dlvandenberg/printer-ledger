@@ -37,9 +37,10 @@ type fieldSpec struct {
 }
 
 type field struct {
-	spec   fieldSpec
-	input  textinput.Model
-	choice int
+	spec    fieldSpec
+	input   textinput.Model
+	choice  int
+	touched bool
 }
 
 func (f field) isChoice() bool { return len(f.spec.Choices) > 0 }
@@ -120,8 +121,10 @@ func (f *form) Update(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 
+	before := f.fields[f.focus].input.Value()
 	var cmd tea.Cmd
 	f.fields[f.focus].input, cmd = f.fields[f.focus].input.Update(msg)
+	f.fields[f.focus].touched = f.fields[f.focus].touched || f.fields[f.focus].input.Value() != before
 	return cmd
 }
 
@@ -141,6 +144,30 @@ func (f *form) Value(key string) string {
 		return fld.input.Value()
 	}
 	return ""
+}
+
+// Prefill writes a derived value into a field the operator has not typed into,
+// so a changed quantity moves an estimate but never overwrites an actual.
+func (f *form) Prefill(key, value string) {
+	for i := range f.fields {
+		if f.fields[i].spec.Key == key && !f.fields[i].isChoice() && !f.fields[i].touched {
+			f.fields[i].input.SetValue(value)
+			// SetValue only clamps the cursor, so without this a backspace
+			// deletes from wherever the last, shorter, prefill ended.
+			f.fields[i].input.CursorEnd()
+		}
+	}
+}
+
+// ChoiceIndex locates a choice by position rather than by label, so two rows
+// that read the same still name different records.
+func (f *form) ChoiceIndex(key string) int {
+	for _, fld := range f.fields {
+		if fld.spec.Key == key {
+			return fld.choice
+		}
+	}
+	return -1
 }
 
 func (f *form) SetErrors(errs *domain.ValidationError) { f.errs = errs }

@@ -231,8 +231,10 @@ Avoid: "job", "plate".
 
 A child of **Print**: `{ spoolID, grams, costPerGramCents }`. A Print holds one or more.
 
-`costPerGramCents` is copied from the **Spool** at creation and never changes, so correcting a
-spool's purchase price affects later prints only.
+`costPerGram` is copied from the **Spool** at creation and never changes, so correcting a
+spool's purchase price affects later prints only. It is held in hundredths of a cent per gram: a
+€22.00 spool of 1000g is 2.2c/g, which no whole number of cents can express. Filament cost sums in
+hundredths across the rows and rounds once at the end.
 
 Multiple rows exist so a mid-print spool swap is one Print, not two: 40g from the spool that ran
 out plus 80g from its replacement. Each row is validated against that Spool's `remaining`, which
@@ -301,7 +303,8 @@ jobCost   = filament + energy + overhead
 costPerCopy  = jobCost / quantity
 ```
 
-`costPerCopy` divides across **all** copies including scrapped ones: every copy cost the same to
+`costPerCopy` rounds where the rest of the cost math truncates — half a cent per copy is money the
+job really spent — and divides across **all** copies including scrapped ones: every copy cost the same to
 make, and the scrap shows up as its own reporting line rather than by inflating the survivors.
 
 Worked example — spool PLA €22.00 / 1000g; print 120g, 5h30m, quantity 2;
