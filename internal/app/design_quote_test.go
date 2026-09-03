@@ -360,3 +360,26 @@ func TestDesignQuoteRoundsAHalfCentOfEnergyUp(t *testing.T) {
 		t.Errorf("Energy = %d, want 12", got)
 	}
 }
+
+func TestDesignQuoteRoundsFilamentUpToTheWholeCent(t *testing.T) {
+	a := newApp(t)
+
+	if _, err := a.AddSpool(ctx(), spoolPriced(domain.PLA, "1000", "25.00")); err != nil {
+		t.Fatalf("AddSpool: %v", err)
+	}
+	cmd := quotedDesign()
+	cmd.EstimatedGrams = "81"
+	design, err := a.AddDesign(ctx(), cmd)
+	if err != nil {
+		t.Fatalf("AddDesign: %v", err)
+	}
+
+	quote, err := a.DesignQuote(ctx(), design.ID)
+	if err != nil {
+		t.Fatalf("DesignQuote: %v", err)
+	}
+
+	if got := quoteRow(t, quote, domain.PLA).Filament; got != 203 {
+		t.Errorf("Filament = %d, want 203", got)
+	}
+}

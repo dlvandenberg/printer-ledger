@@ -38,7 +38,7 @@ func NewDesignQuote(d Design, s Settings, ledgers []SpoolLedger) DesignQuote {
 			FilamentType: t,
 			Spool:        spool,
 			Reference:    reference,
-			Filament:     spool.ValueOf(d.EstimatedGrams),
+			Filament:     spool.QuotedValueOf(d.EstimatedGrams),
 			Energy:       energyCost(d.EstimatedMinutes, s.PowerRate(t).KwhPerHour, s.KwhPrice),
 			Overhead:     overheadCost(d.EstimatedMinutes, s.MachineHourlyRate),
 		})

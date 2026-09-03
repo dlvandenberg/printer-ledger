@@ -167,6 +167,9 @@ energy   = estimatedHours × kwhPerHour[type] × kwhPrice
 overhead = estimatedHours × machineHourlyRate
 ```
 
+`filament` rounds **up** to the whole cent, where a **Spool**'s inventory value truncates
+(ADR-0020) — the same safe direction as **Suggested Price**.
+
 The gram price is the **most expensive Capable Spool**, and the row names it. Quoting off the
 cheap spool and then printing off the expensive one loses money on a price already spoken aloud;
 the direction of error is deliberately safe, as in **Suggested Price**.

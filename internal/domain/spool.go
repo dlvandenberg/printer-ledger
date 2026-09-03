@@ -74,6 +74,15 @@ func (s Spool) ValueOf(g unit.Grams) unit.Cents {
 	return unit.Cents(int64(g) * int64(s.PurchaseCost) / int64(s.InitialGrams))
 }
 
+// QuotedValueOf rounds up where ValueOf truncates, so a quote never sits below
+// what the filament actually cost (ADR-0020).
+func (s Spool) QuotedValueOf(g unit.Grams) unit.Cents {
+	if s.InitialGrams <= 0 {
+		return 0
+	}
+	return unit.Cents(ceilDiv(int64(g)*int64(s.PurchaseCost), int64(s.InitialGrams)))
+}
+
 // PricierPerGramThan compares the two ratios by cross-multiplying, so the
 // truncation in ValueOf cannot decide which spool sets a quote.
 func (s Spool) PricierPerGramThan(o Spool) bool {
