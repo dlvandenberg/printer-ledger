@@ -32,8 +32,8 @@ func TestRecordPrintPinsTheReferenceCase(t *testing.T) {
 	if view.Cost.JobCost != 471 {
 		t.Errorf("JobCost = %d, want 471", view.Cost.JobCost)
 	}
-	if view.Cost.CostPerCopy != 236 {
-		t.Errorf("CostPerCopy = %d, want 236", view.Cost.CostPerCopy)
+	if view.Cost.CostPerCopy != 235 {
+		t.Errorf("CostPerCopy = %d, want 235", view.Cost.CostPerCopy)
 	}
 }
 
@@ -109,8 +109,8 @@ func TestPreviewPrintCostsWithoutRecording(t *testing.T) {
 	if cost.JobCost != 471 {
 		t.Errorf("JobCost = %d, want 471", cost.JobCost)
 	}
-	if cost.CostPerCopy != 236 {
-		t.Errorf("CostPerCopy = %d, want 236", cost.CostPerCopy)
+	if cost.CostPerCopy != 235 {
+		t.Errorf("CostPerCopy = %d, want 235", cost.CostPerCopy)
 	}
 
 	prints, err := a.ListPrints(ctx())

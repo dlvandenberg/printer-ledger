@@ -303,9 +303,8 @@ jobCost   = filament + energy + overhead
 costPerCopy  = jobCost / quantity
 ```
 
-`costPerCopy` rounds where the rest of the cost math truncates — half a cent per copy is money the
-job really spent — and divides across **all** copies including scrapped ones: every copy cost the same to
-make, and the scrap shows up as its own reporting line rather than by inflating the survivors.
+`costPerCopy` truncates (ADR-0002) and divides across **all** copies including scrapped ones: every
+copy cost the same to make, and the scrap shows up as its own reporting line rather than by inflating the survivors.
 
 Worked example — spool PLA €22.00 / 1000g; print 120g, 5h30m, quantity 2;
 kWh €0.28, PLA 0.09 kWh/h, machine €0.35/h:
@@ -315,7 +314,7 @@ filament  120 × 2.2c/g              = 264c
 energy    5.5 × 0.09 × 28c          =  14c
 overhead  5.5 × 35c                 = 193c
 jobCost                             = 471c   (€4.71)
-costPerCopy  471 / 2                   = 236c   (€2.36)
+costPerCopy  471 / 2                   = 235c   (€2.35)
 ```
 
 The same design quoted on the Design screen — 60g and 2h45m per copy, margin 50%:

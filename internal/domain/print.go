@@ -118,14 +118,13 @@ func (p Print) UsedGrams() unit.Grams {
 
 func (c PrintCost) JobCost() unit.Cents { return c.Filament + c.Energy + c.Overhead }
 
-// CostPerCopy rounds where the rest of the cost math truncates: half a cent per
-// copy is money the job really spent, and the pinned reference case is 236c of
-// 471c over two copies.
+// CostPerCopy truncates: the sub-cent per copy is accepted, and Suggested Price
+// rounds up to €0.50 anyway (ADR-0002, ADR-0007).
 func (c PrintCost) CostPerCopy(quantity unit.Copies) unit.Cents {
 	if quantity < 1 {
 		return 0
 	}
-	return unit.Cents(roundDiv(int64(c.JobCost()), int64(quantity)))
+	return c.JobCost() / unit.Cents(quantity)
 }
 
 // filamentCost sums in hundredths of a cent and rounds once, so a gram price
