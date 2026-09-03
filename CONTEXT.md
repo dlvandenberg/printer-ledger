@@ -188,6 +188,14 @@ without implying a second price.
 A **Print** shows cost and per-copy cost, never a suggested price. Once objects exist the
 question is what they cost you, and the price was already decided on the Design.
 
+### Design Quote
+
+A **Design**'s **Estimated Cost** in every **Filament Type** stocked, together with the one
+**Suggested Price** and which row it came from. What you would say out loud to a customer.
+
+A read model, not a stored record. It reads current Settings and current stock, so it moves; a
+**Print**'s cost does not.
+
 ### Print
 
 One machine run. Produces `quantity` copies of one **Design**.

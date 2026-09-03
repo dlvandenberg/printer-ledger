@@ -33,6 +33,29 @@ type DesignView struct {
 	MarginPct           unit.Percent
 }
 
+type DesignQuoteView struct {
+	Design            DesignView
+	Costs             []EstimatedCostView
+	SuggestedPrice    unit.Cents
+	HasSuggestedPrice bool
+	// SuggestedPriceReference is true when the price comes from a row that no
+	// Capable Spool backs, so the operator is quoting filament not in stock.
+	SuggestedPriceReference bool
+}
+
+type EstimatedCostView struct {
+	FilamentType domain.FilamentType
+	IsDefault    bool
+	Filament     unit.Cents
+	Energy       unit.Cents
+	Overhead     unit.Cents
+	Total        unit.Cents
+	Reference    bool
+	SpoolID      int64
+	SpoolBrand   string
+	SpoolColor   string
+}
+
 func (a *App) ListDesigns(ctx context.Context) ([]DesignView, error) {
 	designs, err := a.db.Designs(ctx)
 	if err != nil {
@@ -45,6 +68,23 @@ func (a *App) ListDesigns(ctx context.Context) ([]DesignView, error) {
 	}
 
 	return views, nil
+}
+
+func (a *App) DesignQuote(ctx context.Context, id int64) (DesignQuoteView, error) {
+	design, err := a.db.Design(ctx, id)
+	if err != nil {
+		return DesignQuoteView{}, err
+	}
+	settings, err := a.db.Settings(ctx)
+	if err != nil {
+		return DesignQuoteView{}, err
+	}
+	ledgers, err := a.db.SpoolLedgers(ctx)
+	if err != nil {
+		return DesignQuoteView{}, err
+	}
+
+	return toDesignQuoteView(domain.NewDesignQuote(design, settings, ledgers)), nil
 }
 
 func (a *App) AddDesign(ctx context.Context, cmd AddDesignCmd) (DesignView, error) {
@@ -142,5 +182,33 @@ func toDesignView(d domain.Design) DesignView {
 		EstimatedGrams:      d.EstimatedGrams,
 		EstimatedMinutes:    d.EstimatedMinutes,
 		MarginPct:           d.MarginPct,
+	}
+}
+
+func toDesignQuoteView(q domain.DesignQuote) DesignQuoteView {
+	costs := make([]EstimatedCostView, 0, len(q.Costs))
+	for _, cost := range q.Costs {
+		costs = append(costs, EstimatedCostView{
+			FilamentType: cost.FilamentType,
+			IsDefault:    cost.FilamentType == q.Design.DefaultFilamentType,
+			Filament:     cost.Filament,
+			Energy:       cost.Energy,
+			Overhead:     cost.Overhead,
+			Total:        cost.Total(),
+			Reference:    cost.Reference,
+			SpoolID:      cost.Spool.ID,
+			SpoolBrand:   cost.Spool.Brand,
+			SpoolColor:   cost.Spool.Color,
+		})
+	}
+
+	suggested, hasSuggested := q.SuggestedPrice()
+	defaultCost, _ := q.DefaultCost()
+	return DesignQuoteView{
+		Design:                  toDesignView(q.Design),
+		Costs:                   costs,
+		SuggestedPrice:          suggested,
+		HasSuggestedPrice:       hasSuggested,
+		SuggestedPriceReference: hasSuggested && defaultCost.Reference,
 	}
 }

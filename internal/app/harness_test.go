@@ -129,3 +129,42 @@ func designNamed(t *testing.T, designs []app.DesignView, name string) app.Design
 	t.Fatalf("no design named %q", name)
 	return app.DesignView{}
 }
+
+// quotedDesign is the reference case pinned in CONTEXT.md: 60g and 2h45m per
+// copy at the seeded rates.
+func quotedDesign() app.AddDesignCmd {
+	cmd := plaDesign()
+	cmd.Name = "Planter"
+	cmd.EstimatedGrams = "60"
+	cmd.EstimatedMinutes = "2:45"
+	cmd.MarginPct = "50"
+	return cmd
+}
+
+func spoolPriced(ft domain.FilamentType, grams, cost string) app.AddSpoolCmd {
+	cmd := plaSpool()
+	cmd.FilamentType = ft.String()
+	cmd.InitialGrams = grams
+	cmd.PurchaseCost = cost
+	return cmd
+}
+
+func quoteRow(t *testing.T, q app.DesignQuoteView, ft domain.FilamentType) app.EstimatedCostView {
+	t.Helper()
+	for _, cost := range q.Costs {
+		if cost.FilamentType == ft {
+			return cost
+		}
+	}
+	t.Fatalf("no cost row for %s", ft)
+	return app.EstimatedCostView{}
+}
+
+func hasQuoteRow(q app.DesignQuoteView, ft domain.FilamentType) bool {
+	for _, cost := range q.Costs {
+		if cost.FilamentType == ft {
+			return true
+		}
+	}
+	return false
+}

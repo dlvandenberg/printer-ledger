@@ -10,6 +10,10 @@ import (
 // math never reaches for a float (ADR-0002).
 type Percent int64
 
+// PercentScale is 100% in hundredths of a percent, the factor a Percent has to
+// be divided by before it multiplies anything.
+const PercentScale = 10_000
+
 var ErrMalformedPercent = errors.New("not a percentage, expected e.g. 50")
 
 func ParsePercent(s string) (Percent, error) {

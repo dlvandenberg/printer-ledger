@@ -27,13 +27,13 @@ and a suggested price of €4.00.
 
 **Blocked by:** 03, 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A Design shows one cost row per Filament Type, broken into filament, energy and overhead
-- [ ] Each row uses the most expensive spool of that type with remaining at or above the Design's estimated grams, and names that spool
-- [ ] A spool that is active but too small for the job is excluded from the choice
-- [ ] With no capable spool, the row falls back to the most expensive spool of that type ever bought and is labelled a reference price
-- [ ] A Filament Type never purchased produces no row
-- [ ] One headline suggested price, from the default Filament Type row, using the Design's own margin
-- [ ] Suggested price rounds up to the nearest €0.50, leaving exact multiples unchanged
-- [ ] The reference case above is pinned exactly by a test
+- [x] A Design shows one cost row per Filament Type, broken into filament, energy and overhead
+- [x] Each row uses the most expensive spool of that type with remaining at or above the Design's estimated grams, and names that spool
+- [x] A spool that is active but too small for the job is excluded from the choice
+- [x] With no capable spool, the row falls back to the most expensive spool of that type ever bought and is labelled a reference price
+- [x] A Filament Type never purchased produces no row
+- [x] One headline suggested price, from the default Filament Type row, using the Design's own margin
+- [x] Suggested price rounds up to the nearest €0.50, leaving exact multiples unchanged
+- [x] The reference case above is pinned exactly by a test

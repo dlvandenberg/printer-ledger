@@ -18,6 +18,7 @@ type designsModel struct {
 	app     *app.App
 	rows    []app.DesignView
 	editing *app.DesignView
+	quote   *app.DesignQuoteView
 	cursor  int
 	form    *form
 	loadErr error
@@ -49,16 +50,22 @@ func (m designsModel) Help() string {
 	if m.form != nil {
 		return m.form.Help()
 	}
-	var editHelp string
-	if len(m.rows) > 0 {
-		editHelp = fmt.Sprintf(" · %s edit", KeyE)
+	if m.quote != nil {
+		return fmt.Sprintf("%s edit · %s refresh · %s back · %s", KeyE, KeyR, KeyEsc, globalHelp)
 	}
-	return fmt.Sprintf("%s add%s · %s/%s move · %s", KeyA, editHelp, KeyDown, KeyUp, globalHelp)
+	var rowHelp string
+	if len(m.rows) > 0 {
+		rowHelp = fmt.Sprintf(" · %s edit · %s quote", KeyE, KeyEnter)
+	}
+	return fmt.Sprintf("%s add%s · %s/%s move · %s", KeyA, rowHelp, KeyDown, KeyUp, globalHelp)
 }
 
 func (m designsModel) View() string {
 	if m.form != nil {
 		return m.failure() + m.form.View()
+	}
+	if m.quote != nil {
+		return m.failure() + designQuoteView(*m.quote)
 	}
 
 	var b strings.Builder
@@ -94,6 +101,9 @@ func (m designsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	if m.form != nil {
 		return m.updateForm(msg)
 	}
+	if m.quote != nil {
+		return m.updateQuote(msg)
+	}
 
 	switch msg.String() {
 	case KeyA:
@@ -114,12 +124,39 @@ func (m designsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 			m.editing = &row
 			m.form = editDesignForm(row)
 		}
+	case KeyEnter:
+		if len(m.rows) > 0 {
+			m.openQuote(m.rows[m.cursor].ID)
+		}
 	case KeyDown, KeyJ:
 		if m.cursor < len(m.rows)-1 {
 			m.cursor++
 		}
 	}
 	return m, nil
+}
+
+func (m designsModel) updateQuote(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	switch msg.String() {
+	case KeyEsc:
+		m.quote = nil
+	case KeyE:
+		row := m.quote.Design
+		m.editing = &row
+		m.form = editDesignForm(row)
+	case KeyR:
+		m.openQuote(m.quote.Design.ID)
+	}
+	return m, nil
+}
+
+func (m *designsModel) openQuote(id int64) {
+	quote, err := m.app.DesignQuote(context.Background(), id)
+	if err != nil {
+		m.loadErr = err
+		return
+	}
+	m.quote = &quote
 }
 
 func (m designsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
@@ -142,6 +179,9 @@ func (m designsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		m.editing = nil
 		if err := m.reload(); err != nil {
 			m.loadErr = err
+		}
+		if m.quote != nil {
+			m.openQuote(m.quote.Design.ID)
 		}
 		return m, nil
 	}

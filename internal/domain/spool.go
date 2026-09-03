@@ -73,3 +73,12 @@ func (s Spool) ValueOf(g unit.Grams) unit.Cents {
 	}
 	return unit.Cents(int64(g) * int64(s.PurchaseCost) / int64(s.InitialGrams))
 }
+
+// PricierPerGramThan compares the two ratios by cross-multiplying, so the
+// truncation in ValueOf cannot decide which spool sets a quote.
+func (s Spool) PricierPerGramThan(o Spool) bool {
+	if s.InitialGrams <= 0 || o.InitialGrams <= 0 {
+		return s.InitialGrams > 0
+	}
+	return int64(s.PurchaseCost)*int64(o.InitialGrams) > int64(o.PurchaseCost)*int64(s.InitialGrams)
+}
