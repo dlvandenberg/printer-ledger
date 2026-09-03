@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -65,6 +67,28 @@ func NewSpool(s Spool) (Spool, error) {
 		return Spool{}, err
 	}
 	return s, nil
+}
+
+// EditedSpool corrects a Spool against what its ledger already records, so a
+// lowered initial weight cannot drive remaining below zero (ADR-0003).
+func EditedSpool(l SpoolLedger, s Spool) (Spool, error) {
+	edited, err := NewSpool(s)
+
+	v := &ValidationError{}
+	var invariants *ValidationError
+	switch {
+	case errors.As(err, &invariants):
+		v.MergeMissing(invariants)
+	case err != nil:
+		return Spool{}, err
+	}
+	if floor := l.UsedGrams - l.AdjustedGrams; s.InitialGrams < floor {
+		v.Add(FieldInitialGrams, fmt.Sprintf("cannot be less than the %s already off the spool", unit.FormatGrams(floor)))
+	}
+	if err := v.OrNil(); err != nil {
+		return Spool{}, err
+	}
+	return edited, nil
 }
 
 func (s Spool) ValueOf(g unit.Grams) unit.Cents {

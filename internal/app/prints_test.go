@@ -257,6 +257,39 @@ func TestRecordPrintKeepsItsCostWhenSettingsChange(t *testing.T) {
 	}
 }
 
+func TestEditSpoolRejectsAnInitialWeightBelowWhatPrintsTookOff(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	if _, err := a.RecordPrint(ctx(), printOf(design.ID, spool.ID)); err != nil {
+		t.Fatalf("RecordPrint: %v", err)
+	}
+
+	shrunk := editOfSpool(spool)
+	shrunk.InitialGrams = "100"
+
+	_, err := a.EditSpool(ctx(), shrunk)
+	if err == nil {
+		t.Fatal("expected EditSpool to be rejected")
+	}
+	if got, want := fieldError(t, err, domain.FieldInitialGrams), "cannot be less than the 120g already off the spool"; got != want {
+		t.Errorf("initialGrams error = %q, want %q", got, want)
+	}
+
+	detail, err := a.SpoolDetail(ctx(), spool.ID)
+	if err != nil {
+		t.Fatalf("SpoolDetail: %v", err)
+	}
+	after := detail.Spool
+	if after.InitialGrams != 1000 {
+		t.Errorf("InitialGrams after the rejected edit = %d, want 1000", after.InitialGrams)
+	}
+	if after.RemainingGrams < 0 {
+		t.Errorf("RemainingGrams = %d, want no negative remaining", after.RemainingGrams)
+	}
+}
+
 func TestRecordPrintKeepsItsCostWhenTheSpoolPriceIsCorrected(t *testing.T) {
 	a := newApp(t)
 	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))

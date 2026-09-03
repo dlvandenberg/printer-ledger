@@ -97,24 +97,28 @@ func (a *App) AddSpool(ctx context.Context, cmd AddSpoolCmd) (SpoolView, error) 
 // keep the gram price they froze, so a corrected price applies to later prints
 // only (ADR-0004).
 func (a *App) EditSpool(ctx context.Context, cmd EditSpoolCmd) (SpoolView, error) {
-	spool, err := parseEditSpool(cmd)
-	if err != nil {
-		return SpoolView{}, err
-	}
+	spool, errs := parseEditSpool(cmd)
 
 	var view SpoolView
-	err = a.db.InTx(ctx, func(tx domain.Database) error {
-		if _, err := tx.SpoolLedger(ctx, cmd.SpoolID); err != nil {
-			return err
-		}
-		if _, err := tx.UpdateSpool(ctx, spool); err != nil {
-			return err
-		}
+	err := a.db.InTx(ctx, func(tx domain.Database) error {
 		ledger, err := tx.SpoolLedger(ctx, cmd.SpoolID)
 		if err != nil {
 			return err
 		}
-		view = toSpoolView(ledger)
+		edited, err := validate(spool, errs, func(s domain.Spool) (domain.Spool, error) {
+			return domain.EditedSpool(ledger, s)
+		})
+		if err != nil {
+			return err
+		}
+		if _, err := tx.UpdateSpool(ctx, edited); err != nil {
+			return err
+		}
+		reread, err := tx.SpoolLedger(ctx, cmd.SpoolID)
+		if err != nil {
+			return err
+		}
+		view = toSpoolView(reread)
 		return nil
 	})
 	if err != nil {
@@ -228,7 +232,9 @@ func parseAddSpool(cmd AddSpoolCmd) (domain.Spool, error) {
 	return validate(spool, errs, domain.NewSpool)
 }
 
-func parseEditSpool(cmd EditSpoolCmd) (domain.Spool, error) {
+// parseEditSpool returns the parse errors rather than the aggregate: the
+// invariants need the Spool's ledger, which only the transaction can read.
+func parseEditSpool(cmd EditSpoolCmd) (domain.Spool, *domain.ValidationError) {
 	errs := &domain.ValidationError{}
 	spool := domain.Spool{
 		ID:           cmd.SpoolID,
@@ -241,7 +247,7 @@ func parseEditSpool(cmd EditSpoolCmd) (domain.Spool, error) {
 		PurchaseDate: parseField(errs, domain.FieldPurchaseDate, cmd.PurchaseDate, unit.ParseDate),
 	}
 
-	return validate(spool, errs, domain.NewSpool)
+	return spool, errs
 }
 
 func toSpoolView(l domain.SpoolLedger) SpoolView {
