@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
@@ -16,7 +17,7 @@ import (
 // drift out of alignment.
 const (
 	printRow      = "%s%-10s  %-16s  %6s  %-9s  %6s  %10s  %10s\n"
-	printCostLine = "  %-10s  %10s\n"
+	printCostLine = "  %-10s  %s\n"
 )
 
 var (
@@ -238,12 +239,18 @@ func costBreakdown(cost app.PrintCostView) string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("Cost"))
 	b.WriteString("\n")
-	fmt.Fprintf(&b, printCostLine, "filament", currency+unit.FormatCents(cost.Filament))
-	fmt.Fprintf(&b, printCostLine, "energy", currency+unit.FormatCents(cost.Energy))
-	fmt.Fprintf(&b, printCostLine, "overhead", currency+unit.FormatCents(cost.Overhead))
-	fmt.Fprintf(&b, printCostLine, "job cost", titleStyle.Render(currency+unit.FormatCents(cost.JobCost)))
-	fmt.Fprintf(&b, printCostLine, "per copy", titleStyle.Render(currency+unit.FormatCents(cost.CostPerCopy)))
+	fmt.Fprintf(&b, printCostLine, "filament", costAmount(cost.Filament, plainStyle))
+	fmt.Fprintf(&b, printCostLine, "energy", costAmount(cost.Energy, plainStyle))
+	fmt.Fprintf(&b, printCostLine, "overhead", costAmount(cost.Overhead, plainStyle))
+	fmt.Fprintf(&b, printCostLine, "job cost", costAmount(cost.JobCost, titleStyle))
+	fmt.Fprintf(&b, printCostLine, "per copy", costAmount(cost.CostPerCopy, titleStyle))
 	return b.String()
+}
+
+// costAmount pads before styling: a width verb counts the escape bytes of an
+// already-styled string, so a bold amount would sit short of its column.
+func costAmount(cents unit.Cents, style lipgloss.Style) string {
+	return style.Render(fmt.Sprintf("%10s", currency+unit.FormatCents(cents)))
 }
 
 func (m printsModel) failure() string {

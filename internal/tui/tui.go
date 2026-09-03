@@ -17,6 +17,7 @@ var (
 	activeTabStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15")).Background(lipgloss.Color("62")).Padding(0, 1)
 	inactiveTabStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Padding(0, 1)
 	titleStyle       = lipgloss.NewStyle().Bold(true)
+	plainStyle       = lipgloss.NewStyle()
 	helpStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 	errorStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
 	placeholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).PaddingTop(1)
