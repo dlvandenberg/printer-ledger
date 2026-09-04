@@ -20,8 +20,9 @@ type SpoolRepository interface {
 type DesignRepository interface {
 	CreateDesign(ctx context.Context, d Design) (Design, error)
 	UpdateDesign(ctx context.Context, d Design) (Design, error)
-	Designs(ctx context.Context) ([]Design, error)
-	Design(ctx context.Context, id int64) (Design, error)
+	DeleteDesign(ctx context.Context, id int64) error
+	DesignLedgers(ctx context.Context) ([]DesignLedger, error)
+	DesignLedger(ctx context.Context, id int64) (DesignLedger, error)
 }
 
 type PrintRepository interface {

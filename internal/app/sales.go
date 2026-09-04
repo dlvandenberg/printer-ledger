@@ -140,7 +140,7 @@ func (a *App) ListSales(ctx context.Context) ([]SaleView, error) {
 	if err != nil {
 		return nil, err
 	}
-	designs, err := a.db.Designs(ctx)
+	byDesign, err := designsByID(ctx, a.db)
 	if err != nil {
 		return nil, err
 	}
@@ -148,10 +148,6 @@ func (a *App) ListSales(ctx context.Context) ([]SaleView, error) {
 	byPrint := make(map[int64]domain.PrintLedger, len(ledgers))
 	for _, ledger := range ledgers {
 		byPrint[ledger.Print.ID] = ledger
-	}
-	byDesign := make(map[int64]domain.Design, len(designs))
-	for _, design := range designs {
-		byDesign[design.ID] = design
 	}
 
 	views := make([]SaleView, 0, len(sales))
@@ -188,7 +184,7 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 	if err != nil {
 		return nil, err
 	}
-	designs, err := a.db.Designs(ctx)
+	byID, err := designsByID(ctx, a.db)
 	if err != nil {
 		return nil, err
 	}
@@ -197,14 +193,9 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 		return nil, err
 	}
 
-	byID := make(map[int64]domain.Design, len(designs))
-	for _, design := range designs {
-		byID[design.ID] = design
-	}
-
 	suggested := map[int64]unit.Cents{}
 	hasSuggested := map[int64]bool{}
-	for _, design := range designs {
+	for _, design := range byID {
 		price, ok := domain.NewDesignQuote(design, settings, spools).SuggestedPrice()
 		suggested[design.ID], hasSuggested[design.ID] = price, ok
 	}
@@ -247,7 +238,7 @@ func (a *App) PreviewSale(ctx context.Context, cmd RecordSaleCmd) (SalePreviewVi
 	if err != nil {
 		return SalePreviewView{}, err
 	}
-	design, err := a.db.Design(ctx, ledger.Print.DesignID)
+	design, err := designOf(ctx, a.db, ledger.Print.DesignID)
 	if err != nil {
 		return SalePreviewView{}, err
 	}
@@ -318,7 +309,7 @@ func readSaleView(ctx context.Context, tx domain.Database, sale domain.Sale) (Sa
 	if err != nil {
 		return SaleView{}, err
 	}
-	design, err := tx.Design(ctx, ledger.Print.DesignID)
+	design, err := designOf(ctx, tx, ledger.Print.DesignID)
 	if err != nil {
 		return SaleView{}, err
 	}

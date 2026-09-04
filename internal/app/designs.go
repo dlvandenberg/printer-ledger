@@ -31,6 +31,7 @@ type DesignView struct {
 	EstimatedGrams      unit.Grams
 	EstimatedMinutes    unit.Minutes
 	MarginPct           unit.Percent
+	PrintCount          int64
 }
 
 type DesignQuoteView struct {
@@ -57,21 +58,21 @@ type EstimatedCostView struct {
 }
 
 func (a *App) ListDesigns(ctx context.Context) ([]DesignView, error) {
-	designs, err := a.db.Designs(ctx)
+	ledgers, err := a.db.DesignLedgers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	views := make([]DesignView, 0, len(designs))
-	for _, design := range designs {
-		views = append(views, toDesignView(design))
+	views := make([]DesignView, 0, len(ledgers))
+	for _, ledger := range ledgers {
+		views = append(views, toDesignView(ledger))
 	}
 
 	return views, nil
 }
 
 func (a *App) DesignQuote(ctx context.Context, id int64) (DesignQuoteView, error) {
-	design, err := a.db.Design(ctx, id)
+	ledger, err := a.db.DesignLedger(ctx, id)
 	if err != nil {
 		return DesignQuoteView{}, err
 	}
@@ -79,12 +80,12 @@ func (a *App) DesignQuote(ctx context.Context, id int64) (DesignQuoteView, error
 	if err != nil {
 		return DesignQuoteView{}, err
 	}
-	ledgers, err := a.db.SpoolLedgers(ctx)
+	spools, err := a.db.SpoolLedgers(ctx)
 	if err != nil {
 		return DesignQuoteView{}, err
 	}
 
-	return toDesignQuoteView(domain.NewDesignQuote(design, settings, ledgers)), nil
+	return toDesignQuoteView(ledger, domain.NewDesignQuote(ledger.Design, settings, spools)), nil
 }
 
 func (a *App) AddDesign(ctx context.Context, cmd AddDesignCmd) (DesignView, error) {
@@ -104,7 +105,7 @@ func (a *App) AddDesign(ctx context.Context, cmd AddDesignCmd) (DesignView, erro
 		if err != nil {
 			return err
 		}
-		stored, err := tx.Design(ctx, created.ID)
+		stored, err := tx.DesignLedger(ctx, created.ID)
 		if err != nil {
 			return err
 		}
@@ -122,8 +123,7 @@ func (a *App) AddDesign(ctx context.Context, cmd AddDesignCmd) (DesignView, erro
 func (a *App) EditDesign(ctx context.Context, cmd EditDesignCmd) (DesignView, error) {
 	var view DesignView
 	err := a.db.InTx(ctx, func(tx domain.Database) error {
-		_, err := tx.Design(ctx, cmd.DesignID)
-		if err != nil {
+		if _, err := tx.DesignLedger(ctx, cmd.DesignID); err != nil {
 			return err
 		}
 
@@ -132,11 +132,14 @@ func (a *App) EditDesign(ctx context.Context, cmd EditDesignCmd) (DesignView, er
 			return err
 		}
 
-		updated, err := tx.UpdateDesign(ctx, design)
+		if _, err := tx.UpdateDesign(ctx, design); err != nil {
+			return err
+		}
+		stored, err := tx.DesignLedger(ctx, cmd.DesignID)
 		if err != nil {
 			return err
 		}
-		view = toDesignView(updated)
+		view = toDesignView(stored)
 		return nil
 	})
 
@@ -145,6 +148,21 @@ func (a *App) EditDesign(ctx context.Context, cmd EditDesignCmd) (DesignView, er
 	}
 
 	return view, nil
+}
+
+// DeleteDesign refuses a Design a Print references: the Print is a cost history
+// and would be left describing nothing.
+func (a *App) DeleteDesign(ctx context.Context, id int64) error {
+	return a.db.InTx(ctx, func(tx domain.Database) error {
+		ledger, err := tx.DesignLedger(ctx, id)
+		if err != nil {
+			return err
+		}
+		if err := ledger.DeleteBlocked(); err != nil {
+			return err
+		}
+		return tx.DeleteDesign(ctx, id)
+	})
 }
 
 func parseAddDesign(cmd AddDesignCmd, defaultMargin unit.Percent) (domain.Design, error) {
@@ -174,7 +192,8 @@ func parseEditDesign(cmd EditDesignCmd) (domain.Design, error) {
 	return validate(design, errs, domain.NewDesign)
 }
 
-func toDesignView(d domain.Design) DesignView {
+func toDesignView(l domain.DesignLedger) DesignView {
+	d := l.Design
 	return DesignView{
 		ID:                  d.ID,
 		Name:                d.Name,
@@ -182,10 +201,11 @@ func toDesignView(d domain.Design) DesignView {
 		EstimatedGrams:      d.EstimatedGrams,
 		EstimatedMinutes:    d.EstimatedMinutes,
 		MarginPct:           d.MarginPct,
+		PrintCount:          l.PrintCount,
 	}
 }
 
-func toDesignQuoteView(q domain.DesignQuote) DesignQuoteView {
+func toDesignQuoteView(l domain.DesignLedger, q domain.DesignQuote) DesignQuoteView {
 	costs := make([]EstimatedCostView, 0, len(q.Costs))
 	for _, cost := range q.Costs {
 		costs = append(costs, EstimatedCostView{
@@ -205,10 +225,44 @@ func toDesignQuoteView(q domain.DesignQuote) DesignQuoteView {
 	suggested, hasSuggested := q.SuggestedPrice()
 	defaultCost, _ := q.DefaultCost()
 	return DesignQuoteView{
-		Design:                  toDesignView(q.Design),
+		Design:                  toDesignView(l),
 		Costs:                   costs,
 		SuggestedPrice:          suggested,
 		HasSuggestedPrice:       hasSuggested,
 		SuggestedPriceReference: hasSuggested && defaultCost.Reference,
 	}
+}
+
+// designOf, designsByID and designList read the aggregate out of the ledger for
+// the callers that only need a Design's identity.
+func designOf(ctx context.Context, db domain.Database, id int64) (domain.Design, error) {
+	ledger, err := db.DesignLedger(ctx, id)
+	if err != nil {
+		return domain.Design{}, err
+	}
+	return ledger.Design, nil
+}
+
+func designsByID(ctx context.Context, db domain.Database) (map[int64]domain.Design, error) {
+	designs, err := designList(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[int64]domain.Design, len(designs))
+	for _, design := range designs {
+		byID[design.ID] = design
+	}
+	return byID, nil
+}
+
+func designList(ctx context.Context, db domain.Database) ([]domain.Design, error) {
+	ledgers, err := db.DesignLedgers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	designs := make([]domain.Design, 0, len(ledgers))
+	for _, ledger := range ledgers {
+		designs = append(designs, ledger.Design)
+	}
+	return designs, nil
 }

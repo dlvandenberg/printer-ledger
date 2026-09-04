@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/dlvandenberg/printer-ledger/internal/app"
@@ -442,5 +443,131 @@ func TestAddDesignAcceptsAHundredthOfAGram(t *testing.T) {
 	design := addedDesign(t, a, cmd)
 	if design.EstimatedGrams != 1 {
 		t.Errorf("EstimatedGrams = %d, want 1", design.EstimatedGrams)
+	}
+}
+
+func TestDeleteDesignRemovesItFromTheList(t *testing.T) {
+	a := newApp(t)
+	design := addedDesign(t, a, plaDesign())
+
+	if err := a.DeleteDesign(ctx(), design.ID); err != nil {
+		t.Fatalf("DeleteDesign: %v", err)
+	}
+
+	designs, err := a.ListDesigns(ctx())
+	if err != nil {
+		t.Fatalf("ListDesigns: %v", err)
+	}
+	if len(designs) != 0 {
+		t.Errorf("ListDesigns returned %d designs, want 0", len(designs))
+	}
+}
+
+func TestDeleteDesignBlockedWhenAPrintReferencesIt(t *testing.T) {
+	tests := []struct {
+		name   string
+		prints int
+		want   string
+	}{
+		{"one print", 1, "1 print"},
+		{"three prints", 3, "3 prints"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newApp(t)
+			spool := addedSpool(t, a, plaSpool())
+			design := addedDesign(t, a, quotedDesign())
+			for range tt.prints {
+				recordedPrint(t, a, printOf(design.ID, spool.ID))
+			}
+
+			err := a.DeleteDesign(ctx(), design.ID)
+			if !errors.Is(err, domain.ErrDesignPrinted) {
+				t.Fatalf("DeleteDesign error = %v, want ErrDesignPrinted", err)
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("DeleteDesign error = %q, want it to name %q", err, tt.want)
+			}
+			if strings.Contains(err.Error(), "cop") {
+				t.Errorf("DeleteDesign error = %q, want it to name no copy count", err)
+			}
+
+			designs, err := a.ListDesigns(ctx())
+			if err != nil {
+				t.Fatalf("ListDesigns: %v", err)
+			}
+			if len(designs) != 1 {
+				t.Errorf("ListDesigns returned %d designs, want 1", len(designs))
+			}
+		})
+	}
+}
+
+func TestDeleteDesignSucceedsOnceItsPrintIsDeleted(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, plaSpool())
+	design := addedDesign(t, a, quotedDesign())
+	printed := recordedPrint(t, a, printOf(design.ID, spool.ID))
+
+	if err := a.DeletePrint(ctx(), printed.ID); err != nil {
+		t.Fatalf("DeletePrint: %v", err)
+	}
+	if err := a.DeleteDesign(ctx(), design.ID); err != nil {
+		t.Fatalf("DeleteDesign: %v", err)
+	}
+
+	designs, err := a.ListDesigns(ctx())
+	if err != nil {
+		t.Fatalf("ListDesigns: %v", err)
+	}
+	if len(designs) != 0 {
+		t.Errorf("ListDesigns returned %d designs, want 0", len(designs))
+	}
+}
+
+func TestDeleteDesignLeavesOtherDesignsPrintsAlone(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, plaSpool())
+	printed := addedDesign(t, a, quotedDesign())
+	unprinted := addedDesign(t, a, plaDesign())
+	kept := recordedPrint(t, a, printOf(printed.ID, spool.ID))
+
+	if err := a.DeleteDesign(ctx(), printed.ID); !errors.Is(err, domain.ErrDesignPrinted) {
+		t.Fatalf("DeleteDesign error = %v, want ErrDesignPrinted", err)
+	}
+	if err := a.DeleteDesign(ctx(), unprinted.ID); err != nil {
+		t.Fatalf("DeleteDesign: %v", err)
+	}
+
+	prints, err := a.ListPrints(ctx())
+	if err != nil {
+		t.Fatalf("ListPrints: %v", err)
+	}
+	if len(prints) != 1 {
+		t.Fatalf("ListPrints returned %d prints, want 1", len(prints))
+	}
+	if prints[0].ID != kept.ID {
+		t.Errorf("surviving print = %d, want %d", prints[0].ID, kept.ID)
+	}
+}
+
+func TestListDesignsReportsPrintCount(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, plaSpool())
+	printed := addedDesign(t, a, quotedDesign())
+	addedDesign(t, a, plaDesign())
+	recordedPrint(t, a, printOf(printed.ID, spool.ID))
+	recordedPrint(t, a, printOf(printed.ID, spool.ID))
+
+	designs, err := a.ListDesigns(ctx())
+	if err != nil {
+		t.Fatalf("ListDesigns: %v", err)
+	}
+	if got := designNamed(t, designs, "Planter").PrintCount; got != 2 {
+		t.Errorf("Planter PrintCount = %d, want 2", got)
+	}
+	if got := designNamed(t, designs, "Cable clip").PrintCount; got != 0 {
+		t.Errorf("Cable clip PrintCount = %d, want 0", got)
 	}
 }

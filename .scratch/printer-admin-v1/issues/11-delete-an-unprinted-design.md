@@ -25,12 +25,12 @@ No schema migration: the count is a join over tables that already exist.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A Design no Print references can be deleted from the Designs list and is gone from it afterwards
-- [ ] A Design a Print references cannot be deleted, and the error names how many Prints are in the way
-- [ ] Deleting that Design's Print first, then the Design, succeeds
-- [ ] Neither a blocked nor a successful delete disturbs the Prints that reference other Designs
-- [ ] The Designs list reports a print count per Design, trailing the margin column
-- [ ] Deletion is confirmed before it happens
-- [ ] `CONTEXT.md` gains the Design Ledger entry and the Design delete rule
+- [x] A Design no Print references can be deleted from the Designs list and is gone from it afterwards
+- [x] A Design a Print references cannot be deleted, and the error names how many Prints are in the way
+- [x] Deleting that Design's Print first, then the Design, succeeds
+- [x] Neither a blocked nor a successful delete disturbs the Prints that reference other Designs
+- [x] The Designs list reports a print count per Design, trailing the margin column
+- [x] Deletion is confirmed before it happens
+- [x] `CONTEXT.md` gains the Design Ledger entry and the Design delete rule

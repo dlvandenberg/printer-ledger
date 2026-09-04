@@ -21,6 +21,7 @@ type designsModel struct {
 	quote   *app.DesignQuoteView
 	cursor  int
 	form    *form
+	confirm *confirm
 	loadErr error
 }
 
@@ -50,12 +51,15 @@ func (m designsModel) Help() string {
 	if m.form != nil {
 		return m.form.Help()
 	}
+	if m.confirm != nil {
+		return m.confirm.Help()
+	}
 	if m.quote != nil {
 		return fmt.Sprintf("%s edit · %s refresh · %s back · %s", KeyE, KeyR, KeyEsc, globalHelp)
 	}
 	var rowHelp string
 	if len(m.rows) > 0 {
-		rowHelp = fmt.Sprintf(" · %s edit · %s quote", KeyE, KeyEnter)
+		rowHelp = fmt.Sprintf(" · %s edit · %s quote · %s delete", KeyE, KeyEnter, KeyD)
 	}
 	return fmt.Sprintf("%s add%s · %s/%s move · %s", KeyA, rowHelp, KeyDown, KeyUp, globalHelp)
 }
@@ -78,28 +82,36 @@ func (m designsModel) View() string {
 		return b.String()
 	}
 
-	fmt.Fprintf(&b, "  %-16s  %12s  %16s  %15s  %-7s\n",
-		"NAME", "DEFAULT TYPE", "ESTIMATED GRAMS", "ESTIMATED TIME", "MARGIN")
+	fmt.Fprintf(&b, "  %-16s  %12s  %16s  %15s  %-7s  %6s\n",
+		"NAME", "DEFAULT TYPE", "ESTIMATED GRAMS", "ESTIMATED TIME", "MARGIN", "PRINTS")
 
 	for i, row := range m.rows {
 		marker := "  "
 		if i == m.cursor {
 			marker = "> "
 		}
-		fmt.Fprintf(&b, "%s%-16s  %-12s  %-16s  %-15s  %-7s\n",
-			marker, truncate(row.Name, 16), row.DefaultFilamentType, unit.FormatGrams(row.EstimatedGrams), unit.FormatMinutes(row.EstimatedMinutes), unit.FormatPercent(row.MarginPct))
+		fmt.Fprintf(&b, "%s%-16s  %-12s  %-16s  %-15s  %-7s  %6d\n",
+			marker, truncate(row.Name, 16), row.DefaultFilamentType, unit.FormatGrams(row.EstimatedGrams), unit.FormatMinutes(row.EstimatedMinutes), unit.FormatPercent(row.MarginPct), row.PrintCount)
+	}
+
+	if m.confirm != nil {
+		b.WriteString("\n")
+		b.WriteString(m.confirm.View())
 	}
 
 	return b.String()
 }
 
 func (m designsModel) CapturesInput() bool {
-	return m.form != nil
+	return m.form != nil || m.confirm != nil
 }
 
 func (m designsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	if m.form != nil {
 		return m.updateForm(msg)
+	}
+	if m.confirm != nil {
+		return m.updateConfirm(msg)
 	}
 	if m.quote != nil {
 		return m.updateQuote(msg)
@@ -128,9 +140,36 @@ func (m designsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		if len(m.rows) > 0 {
 			m.openQuote(m.rows[m.cursor].ID)
 		}
+	case KeyD:
+		if len(m.rows) > 0 {
+			m.askDelete(m.rows[m.cursor])
+		}
 	case KeyDown, KeyJ:
 		if m.cursor < len(m.rows)-1 {
 			m.cursor++
+		}
+	}
+	return m, nil
+}
+
+// askDelete prompts even where the delete will be refused: whether a Design
+// has been printed is the domain's answer, not the view's (ADR-0011).
+func (m *designsModel) askDelete(design app.DesignView) {
+	m.loadErr = nil
+	m.confirm = newConfirm(
+		fmt.Sprintf("Delete the design %s?", design.Name),
+		func() error { return m.app.DeleteDesign(context.Background(), design.ID) })
+}
+
+func (m designsModel) updateConfirm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	confirmed, deleted, err := m.confirm.Answer(msg)
+	m.confirm = confirmed
+	switch {
+	case err != nil:
+		m.loadErr = err
+	case deleted:
+		if err := m.reload(); err != nil {
+			m.loadErr = err
 		}
 	}
 	return m, nil

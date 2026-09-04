@@ -91,7 +91,7 @@ type PrintDraftView struct {
 func (a *App) RecordPrint(ctx context.Context, cmd RecordPrintCmd) (PrintView, error) {
 	var view PrintView
 	err := a.db.InTx(ctx, func(tx domain.Database) error {
-		design, err := tx.Design(ctx, cmd.DesignID)
+		design, err := designOf(ctx, tx, cmd.DesignID)
 		if err != nil {
 			return err
 		}
@@ -136,7 +136,7 @@ func (a *App) EditPrint(ctx context.Context, cmd EditPrintCmd) (PrintView, error
 		if err != nil {
 			return err
 		}
-		design, err := tx.Design(ctx, cmd.DesignID)
+		design, err := designOf(ctx, tx, cmd.DesignID)
 		if err != nil {
 			return err
 		}
@@ -188,7 +188,7 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 	if err != nil {
 		return nil, err
 	}
-	designs, err := a.db.Designs(ctx)
+	designs, err := designsByID(ctx, a.db)
 	if err != nil {
 		return nil, err
 	}
@@ -197,20 +197,15 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 		return nil, err
 	}
 
-	byID := make(map[int64]domain.Design, len(designs))
-	for _, design := range designs {
-		byID[design.ID] = design
-	}
-
 	views := make([]PrintView, 0, len(ledgers))
 	for _, ledger := range ledgers {
-		views = append(views, toPrintView(ledger, byID[ledger.Print.DesignID], spools))
+		views = append(views, toPrintView(ledger, designs[ledger.Print.DesignID], spools))
 	}
 	return views, nil
 }
 
 func (a *App) PrintDraft(ctx context.Context, designID int64, quantity string) (PrintDraftView, error) {
-	design, err := a.db.Design(ctx, designID)
+	design, err := designOf(ctx, a.db, designID)
 	if err != nil {
 		return PrintDraftView{}, err
 	}

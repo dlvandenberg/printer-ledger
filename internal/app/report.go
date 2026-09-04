@@ -98,7 +98,7 @@ func (a *App) Report(ctx context.Context, cmd ReportCmd) (ReportView, error) {
 	if err != nil {
 		return ReportView{}, err
 	}
-	designs, err := a.db.Designs(ctx)
+	designs, err := designList(ctx, a.db)
 	if err != nil {
 		return ReportView{}, err
 	}
