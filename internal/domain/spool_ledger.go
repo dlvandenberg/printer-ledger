@@ -1,6 +1,13 @@
 package domain
 
-import "github.com/dlvandenberg/printer-ledger/internal/domain/unit"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
+)
+
+var ErrSpoolDrawnFrom = errors.New("cannot delete a spool a print has drawn from")
 
 type SpoolLedger struct {
 	Spool         Spool
@@ -21,4 +28,11 @@ func (l SpoolLedger) State() SpoolState {
 		return SpoolActive
 	}
 	return SpoolEmpty
+}
+
+func (l SpoolLedger) DeleteBlocked() error {
+	if l.UsedGrams == 0 {
+		return nil
+	}
+	return fmt.Errorf("%w: %s used", ErrSpoolDrawnFrom, unit.FormatGrams(l.UsedGrams))
 }

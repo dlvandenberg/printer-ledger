@@ -107,8 +107,10 @@ from the spool's `tareGrams`.
 | `deltaGrams` | `derivedRemaining` minus the previously computed remaining |
 | `date`, `note` | Provenance |
 
-Adjustments are never edited or deleted — they *are* the correction mechanism. Everything else
-in the app is edited in place.
+Adjustments are never edited, and never deleted on their own — they *are* the correction
+mechanism. Everything else in the app is edited in place. Deleting the **Spool** deletes its
+Adjustments with it, since a delta against a Spool that no longer exists records nothing
+(ADR-0022).
 
 A run that produced nothing — a print that failed at layer three — is recorded here, not as a
 **Print**. The filament is genuinely gone; the machine hours are absorbed by

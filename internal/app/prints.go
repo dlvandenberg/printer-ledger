@@ -13,7 +13,18 @@ type RecordPrintCmd struct {
 	Date     string
 	Quantity string
 	Minutes  string
+	Gifted   string
+	Kept     string
+	Scrapped string
 	Usages   []FilamentUsageCmd
+}
+
+// EditPrintCmd is a RecordPrintCmd against a Print that already exists: an
+// edit re-types every field the record form has.
+type EditPrintCmd struct {
+	RecordPrintCmd
+
+	PrintID int64
 }
 
 type FilamentUsageCmd struct {
@@ -22,18 +33,23 @@ type FilamentUsageCmd struct {
 }
 
 type PrintView struct {
-	ID          int64
-	DesignID    int64
-	DesignName  string
-	Date        time.Time
-	Quantity    unit.Copies
-	Minutes     unit.Minutes
-	UsedGrams   unit.Grams
-	KwhPrice    unit.Cents
-	KwhPerHour  unit.KwhPerHour
-	MachineRate unit.Cents
-	Cost        PrintCostView
-	Usages      []FilamentUsageView
+	ID              int64
+	DesignID        int64
+	DesignName      string
+	Date            time.Time
+	Quantity        unit.Copies
+	Minutes         unit.Minutes
+	UsedGrams       unit.Grams
+	SoldCount       unit.Copies
+	GiftedCount     unit.Copies
+	KeptCount       unit.Copies
+	ScrappedCount   unit.Copies
+	AvailableCopies unit.Copies
+	KwhPrice        unit.Cents
+	KwhPerHour      unit.KwhPerHour
+	MachineRate     unit.Cents
+	Cost            PrintCostView
+	Usages          []FilamentUsageView
 }
 
 type PrintCostView struct {
@@ -97,7 +113,7 @@ func (a *App) RecordPrint(ctx context.Context, cmd RecordPrintCmd) (PrintView, e
 		if err != nil {
 			return err
 		}
-		stored, err := tx.Print(ctx, created.ID)
+		stored, err := tx.PrintLedger(ctx, created.ID)
 		if err != nil {
 			return err
 		}
@@ -110,8 +126,65 @@ func (a *App) RecordPrint(ctx context.Context, cmd RecordPrintCmd) (PrintView, e
 	return view, nil
 }
 
+// EditPrint corrects a Print in place (ADR-0011). Its cost does not move: the
+// rate snapshot and the frozen gram prices are kept, while the Spool's
+// remaining follows the edited grams, being derived (ADR-0003).
+func (a *App) EditPrint(ctx context.Context, cmd EditPrintCmd) (PrintView, error) {
+	var view PrintView
+	err := a.db.InTx(ctx, func(tx domain.Database) error {
+		stored, err := tx.PrintLedger(ctx, cmd.PrintID)
+		if err != nil {
+			return err
+		}
+		design, err := tx.Design(ctx, cmd.DesignID)
+		if err != nil {
+			return err
+		}
+		ledgers, err := tx.SpoolLedgers(ctx)
+		if err != nil {
+			return err
+		}
+
+		edited, err := parseEditPrint(cmd, stored, ledgers)
+		if err != nil {
+			return err
+		}
+
+		if _, err := tx.UpdatePrint(ctx, edited); err != nil {
+			return err
+		}
+		reread, err := tx.PrintLedger(ctx, cmd.PrintID)
+		if err != nil {
+			return err
+		}
+		rereadLedgers, err := tx.SpoolLedgers(ctx)
+		if err != nil {
+			return err
+		}
+		view = toPrintView(reread, design, rereadLedgers)
+		return nil
+	})
+	if err != nil {
+		return PrintView{}, err
+	}
+	return view, nil
+}
+
+func (a *App) DeletePrint(ctx context.Context, id int64) error {
+	return a.db.InTx(ctx, func(tx domain.Database) error {
+		ledger, err := tx.PrintLedger(ctx, id)
+		if err != nil {
+			return err
+		}
+		if err := ledger.DeleteBlocked(); err != nil {
+			return err
+		}
+		return tx.DeletePrint(ctx, id)
+	})
+}
+
 func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
-	prints, err := a.db.Prints(ctx)
+	ledgers, err := a.db.PrintLedgers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +192,7 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 	if err != nil {
 		return nil, err
 	}
-	ledgers, err := a.db.SpoolLedgers(ctx)
+	spools, err := a.db.SpoolLedgers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -129,9 +202,9 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 		byID[design.ID] = design
 	}
 
-	views := make([]PrintView, 0, len(prints))
-	for _, p := range prints {
-		views = append(views, toPrintView(p, byID[p.DesignID], ledgers))
+	views := make([]PrintView, 0, len(ledgers))
+	for _, ledger := range ledgers {
+		views = append(views, toPrintView(ledger, byID[ledger.Print.DesignID], spools))
 	}
 	return views, nil
 }
@@ -176,12 +249,40 @@ func (a *App) PreviewPrint(ctx context.Context, cmd RecordPrintCmd) (PrintPrevie
 	}, nil
 }
 
+// PreviewEditPrint costs a Print being edited at the rates it was recorded
+// with, so the breakdown on the edit form is the cost that will be stored.
+func (a *App) PreviewEditPrint(ctx context.Context, cmd EditPrintCmd) (PrintPreviewView, error) {
+	stored, err := a.db.PrintLedger(ctx, cmd.PrintID)
+	if err != nil {
+		return PrintPreviewView{}, err
+	}
+	ledgers, err := a.db.SpoolLedgers(ctx)
+	if err != nil {
+		return PrintPreviewView{}, err
+	}
+
+	drafted := draftPrint(cmd.RecordPrintCmd, &domain.ValidationError{}).WithFrozenRatesOf(stored.Print, ledgers)
+	return PrintPreviewView{
+		Cost:         toPrintCostView(drafted),
+		FilamentType: drafted.FilamentType(ledgers),
+	}, nil
+}
+
 func parseRecordPrint(cmd RecordPrintCmd, s domain.Settings, ledgers []domain.SpoolLedger) (domain.Print, error) {
 	errs := &domain.ValidationError{}
 	drafted := draftPrint(cmd, errs)
 
 	return validate(drafted, errs, func(p domain.Print) (domain.Print, error) {
 		return domain.NewPrint(p, s, ledgers)
+	})
+}
+
+func parseEditPrint(cmd EditPrintCmd, stored domain.PrintLedger, ledgers []domain.SpoolLedger) (domain.Print, error) {
+	errs := &domain.ValidationError{}
+	drafted := draftPrint(cmd.RecordPrintCmd, errs)
+
+	return validate(drafted, errs, func(p domain.Print) (domain.Print, error) {
+		return domain.EditedPrint(stored, p, ledgers)
 	})
 }
 
@@ -195,11 +296,14 @@ func draftPrint(cmd RecordPrintCmd, errs *domain.ValidationError) domain.Print {
 	}
 
 	return domain.Print{
-		DesignID: cmd.DesignID,
-		Date:     parseField(errs, domain.FieldPrintDate, cmd.Date, unit.ParseDate),
-		Quantity: parseField(errs, domain.FieldQuantity, cmd.Quantity, unit.ParseCopies),
-		Minutes:  parseField(errs, domain.FieldMinutes, cmd.Minutes, unit.ParseTime),
-		Usages:   usages,
+		DesignID:      cmd.DesignID,
+		Date:          parseField(errs, domain.FieldPrintDate, cmd.Date, unit.ParseDate),
+		Quantity:      parseField(errs, domain.FieldQuantity, cmd.Quantity, unit.ParseCopies),
+		Minutes:       parseField(errs, domain.FieldMinutes, cmd.Minutes, unit.ParseTime),
+		GiftedCount:   parseField(errs, domain.FieldGifted, cmd.Gifted, fallback(0, unit.ParseCopies)),
+		KeptCount:     parseField(errs, domain.FieldKept, cmd.Kept, fallback(0, unit.ParseCopies)),
+		ScrappedCount: parseField(errs, domain.FieldScrapped, cmd.Scrapped, fallback(0, unit.ParseCopies)),
+		Usages:        usages,
 	}
 }
 
@@ -215,7 +319,8 @@ func parseQuantity(raw string) (unit.Copies, error) {
 	return copies, nil
 }
 
-func toPrintView(p domain.Print, design domain.Design, ledgers []domain.SpoolLedger) PrintView {
+func toPrintView(l domain.PrintLedger, design domain.Design, ledgers []domain.SpoolLedger) PrintView {
+	p := l.Print
 	usages := make([]FilamentUsageView, 0, len(p.Usages))
 	for _, usage := range p.Usages {
 		view := FilamentUsageView{
@@ -235,18 +340,23 @@ func toPrintView(p domain.Print, design domain.Design, ledgers []domain.SpoolLed
 	}
 
 	return PrintView{
-		ID:          p.ID,
-		DesignID:    p.DesignID,
-		DesignName:  design.Name,
-		Date:        p.Date,
-		Quantity:    p.Quantity,
-		Minutes:     p.Minutes,
-		UsedGrams:   p.UsedGrams(),
-		KwhPrice:    p.KwhPrice,
-		KwhPerHour:  p.KwhPerHour,
-		MachineRate: p.MachineRate,
-		Cost:        toPrintCostView(p),
-		Usages:      usages,
+		ID:              p.ID,
+		DesignID:        p.DesignID,
+		DesignName:      design.Name,
+		Date:            p.Date,
+		Quantity:        p.Quantity,
+		Minutes:         p.Minutes,
+		UsedGrams:       p.UsedGrams(),
+		SoldCount:       l.SoldCount,
+		GiftedCount:     p.GiftedCount,
+		KeptCount:       p.KeptCount,
+		ScrappedCount:   p.ScrappedCount,
+		AvailableCopies: l.Available(),
+		KwhPrice:        p.KwhPrice,
+		KwhPerHour:      p.KwhPerHour,
+		MachineRate:     p.MachineRate,
+		Cost:            toPrintCostView(p),
+		Usages:          usages,
 	}
 }
 

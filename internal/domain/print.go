@@ -12,6 +12,9 @@ const (
 	FieldQuantity  = "quantity"
 	FieldMinutes   = "minutes"
 	FieldPrintDate = "date"
+	FieldGifted    = "gifted"
+	FieldKept      = "kept"
+	FieldScrapped  = "scrapped"
 )
 
 // FieldUsageSpool and FieldUsageGrams key one Filament Usage row, so an error
@@ -28,15 +31,18 @@ type FilamentUsage struct {
 }
 
 type Print struct {
-	ID          int64
-	DesignID    int64
-	Date        time.Time
-	Quantity    unit.Copies
-	Minutes     unit.Minutes
-	KwhPrice    unit.Cents
-	KwhPerHour  unit.KwhPerHour
-	MachineRate unit.Cents
-	Usages      []FilamentUsage
+	ID            int64
+	DesignID      int64
+	Date          time.Time
+	Quantity      unit.Copies
+	Minutes       unit.Minutes
+	GiftedCount   unit.Copies
+	KeptCount     unit.Copies
+	ScrappedCount unit.Copies
+	KwhPrice      unit.Cents
+	KwhPerHour    unit.KwhPerHour
+	MachineRate   unit.Cents
+	Usages        []FilamentUsage
 }
 
 type PrintCost struct {
@@ -52,6 +58,37 @@ func NewPrint(p Print, s Settings, ledgers []SpoolLedger) (Print, error) {
 	p = p.WithRates(s, ledgers)
 
 	v := &ValidationError{}
+	validatePrint(p, ledgers, v)
+	PrintLedger{Print: p}.validateAvailable(v)
+
+	if err := v.OrNil(); err != nil {
+		return Print{}, err
+	}
+	return p, nil
+}
+
+// EditedPrint corrects a Print without re-costing it: the rate snapshot and the
+// gram price of every Spool it already drew from are kept (ADR-0004), and only
+// a row naming a Spool this Print did not use takes that Spool's price today.
+// The Print's own grams are released before the overdraw check, since the
+// Spool's remaining is derived from them (ADR-0003).
+func EditedPrint(stored PrintLedger, p Print, ledgers []SpoolLedger) (Print, error) {
+	released := releaseUsage(ledgers, stored.Print)
+
+	p = p.WithFrozenRatesOf(stored.Print, released)
+	p.ID = stored.Print.ID
+
+	v := &ValidationError{}
+	validatePrint(p, released, v)
+	PrintLedger{Print: p, SoldCount: stored.SoldCount}.validateAvailable(v)
+
+	if err := v.OrNil(); err != nil {
+		return Print{}, err
+	}
+	return p, nil
+}
+
+func validatePrint(p Print, ledgers []SpoolLedger, v *ValidationError) {
 	if p.Quantity < 1 {
 		v.Add(FieldQuantity, "must be at least 1")
 	}
@@ -61,11 +98,25 @@ func NewPrint(p Print, s Settings, ledgers []SpoolLedger) (Print, error) {
 	if p.Date.IsZero() {
 		v.Add(FieldPrintDate, "is required")
 	}
+	if p.GiftedCount < 0 {
+		v.Add(FieldGifted, "cannot be negative")
+	}
+	if p.KeptCount < 0 {
+		v.Add(FieldKept, "cannot be negative")
+	}
+	if p.ScrappedCount < 0 {
+		v.Add(FieldScrapped, "cannot be negative")
+	}
 	if len(p.Usages) == 0 {
 		v.Add(FieldUsageSpool(0), "is required")
 	}
-	// Grams are summed per Spool, not checked per row (ADR-0021), and the
-	// overdraw is reported once, on the row that crosses what is left.
+	validateUsages(p, ledgers, v)
+}
+
+// validateUsages sums grams per Spool rather than checking them per row
+// (ADR-0021), and reports the overdraw once, on the row that crosses what is
+// left.
+func validateUsages(p Print, ledgers []SpoolLedger, v *ValidationError) {
 	printType := p.FilamentType(ledgers)
 	requested := map[int64]unit.Grams{}
 	overdrawn := map[int64]bool{}
@@ -86,11 +137,6 @@ func NewPrint(p Print, s Settings, ledgers []SpoolLedger) (Print, error) {
 			}
 		}
 	}
-
-	if err := v.OrNil(); err != nil {
-		return Print{}, err
-	}
-	return p, nil
 }
 
 // WithRates copies the rates in force and each Spool's gram price onto the
@@ -108,6 +154,18 @@ func (p Print) WithRates(s Settings, ledgers []SpoolLedger) Print {
 	p.KwhPrice = s.KwhPrice
 	p.KwhPerHour = s.PowerRate(p.FilamentType(ledgers)).KwhPerHour
 	p.MachineRate = s.MachineHourlyRate
+	return p
+}
+
+// WithFrozenRatesOf costs an edited Print the way the stored one was costed:
+// the rate snapshot stands, and so does the gram price of every Spool it
+// already drew from. A row naming a Spool it did not use takes that Spool's
+// price today (ADR-0004).
+func (p Print) WithFrozenRatesOf(stored Print, ledgers []SpoolLedger) Print {
+	p.KwhPrice = stored.KwhPrice
+	p.KwhPerHour = stored.KwhPerHour
+	p.MachineRate = stored.MachineRate
+	p.Usages = repriced(p.Usages, stored, ledgers)
 	return p
 }
 
@@ -158,6 +216,37 @@ func (p Print) FilamentType(ledgers []SpoolLedger) FilamentType {
 		}
 	}
 	return ""
+}
+
+func repriced(usages []FilamentUsage, stored Print, ledgers []SpoolLedger) []FilamentUsage {
+	frozen := map[int64]unit.CentsPerGram{}
+	for _, usage := range stored.Usages {
+		frozen[usage.SpoolID] = usage.CostPerGram
+	}
+
+	priced := make([]FilamentUsage, 0, len(usages))
+	for _, usage := range usages {
+		if price, ok := frozen[usage.SpoolID]; ok {
+			usage.CostPerGram = price
+		} else if ledger, found := findLedger(ledgers, usage.SpoolID); found {
+			usage.CostPerGram = ledger.Spool.GramPrice()
+		}
+		priced = append(priced, usage)
+	}
+	return priced
+}
+
+func releaseUsage(ledgers []SpoolLedger, p Print) []SpoolLedger {
+	released := make([]SpoolLedger, 0, len(ledgers))
+	for _, ledger := range ledgers {
+		for _, usage := range p.Usages {
+			if usage.SpoolID == ledger.Spool.ID {
+				ledger.UsedGrams -= usage.Grams
+			}
+		}
+		released = append(released, ledger)
+	}
+	return released
 }
 
 func findLedger(ledgers []SpoolLedger, spoolID int64) (SpoolLedger, bool) {

@@ -16,7 +16,7 @@ import (
 // One format per table, shared by its header and its rows, so the two cannot
 // drift out of alignment.
 const (
-	printRow      = "%s%-10s  %-16s  %6s  %-9s  %6s  %10s  %10s\n"
+	printRow      = "%s%-10s  %-16s  %6s  %6s  %-9s  %6s  %10s  %10s\n"
 	printCostLine = "  %-10s  %s\n"
 )
 
@@ -32,6 +32,8 @@ type printsModel struct {
 	rows      []app.PrintView
 	cursor    int
 	form      *form
+	editing   *app.PrintView
+	confirm   *confirm
 	designs   []app.DesignView
 	spools    []app.SpoolView
 	preview   app.PrintPreviewView
@@ -65,20 +67,40 @@ func (m printsModel) Help() string {
 	if m.form != nil {
 		return fmt.Sprintf("%s · %s add spool row · %s remove spool row", m.form.Help(), KeyCtrlN, KeyCtrlX)
 	}
-	return fmt.Sprintf("%s record · %s/%s move · %s", KeyA, KeyDown, KeyUp, globalHelp)
+	if m.confirm != nil {
+		return m.confirm.Help()
+	}
+	var rowHelp string
+	if len(m.rows) > 0 {
+		rowHelp = fmt.Sprintf(" · %s edit · %s delete", KeyE, KeyD)
+	}
+	return fmt.Sprintf("%s record%s · %s/%s move · %s", KeyA, rowHelp, KeyDown, KeyUp, globalHelp)
 }
 
-func (m printsModel) CapturesInput() bool { return m.form != nil }
+func (m printsModel) CapturesInput() bool { return m.form != nil || m.confirm != nil }
 
 func (m printsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	if m.form != nil {
 		return m.updateForm(msg)
+	}
+	if m.confirm != nil {
+		return m.updateConfirm(msg)
 	}
 
 	switch msg.String() {
 	case KeyA:
 		if err := m.openForm(); err != nil {
 			m.loadErr = err
+		}
+	case KeyE:
+		if len(m.rows) > 0 {
+			if err := m.openEditForm(m.rows[m.cursor]); err != nil {
+				m.loadErr = err
+			}
+		}
+	case KeyD:
+		if len(m.rows) > 0 {
+			m.askDelete(m.rows[m.cursor])
 		}
 	case KeyUp, KeyK:
 		if m.cursor > 0 {
@@ -114,6 +136,7 @@ func (m *printsModel) openForm() error {
 	}
 
 	m.loadErr = nil
+	m.editing = nil
 	m.designs = designs
 	m.spools = spools
 	m.form = newPrintForm(designs, spools, draft)
@@ -121,6 +144,50 @@ func (m *printsModel) openForm() error {
 	m.drafted, m.priced = "", ""
 	m.reprice()
 	return nil
+}
+
+// openEditForm offers every Spool, empty ones included: a Print may already
+// have drawn a Spool down to nothing, and its own row must still name it.
+func (m *printsModel) openEditForm(print app.PrintView) error {
+	designs, err := m.app.ListDesigns(context.Background())
+	if err != nil {
+		return err
+	}
+	spools, err := m.app.ListSpools(context.Background())
+	if err != nil {
+		return err
+	}
+
+	m.loadErr = nil
+	m.editing = &print
+	m.designs = designs
+	m.spools = spools
+	m.form, m.usageRows = newEditPrintForm(designs, spools, print)
+	m.drafted = m.form.Value(domain.FieldDesignID) + "|" + m.form.Value(domain.FieldQuantity)
+	m.priced = ""
+	m.reprice()
+	return nil
+}
+
+func (m *printsModel) askDelete(print app.PrintView) {
+	m.loadErr = nil
+	m.confirm = newConfirm(
+		fmt.Sprintf("Delete the print of %s on %s?", print.DesignName, unit.FormatDate(print.Date)),
+		func() error { return m.app.DeletePrint(context.Background(), print.ID) })
+}
+
+func (m printsModel) updateConfirm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	confirmed, deleted, err := m.confirm.Answer(msg)
+	m.confirm = confirmed
+	switch {
+	case err != nil:
+		m.loadErr = err
+	case deleted:
+		if err := m.reload(); err != nil {
+			m.loadErr = err
+		}
+	}
+	return m, nil
 }
 
 func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
@@ -158,6 +225,10 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 }
 
 func (m printsModel) submitForm() error {
+	if m.editing != nil {
+		_, err := m.app.EditPrint(context.Background(), editPrintCmd(m.form, m.editing.ID, m.designs, m.spools, m.usageRows))
+		return err
+	}
 	_, err := m.app.RecordPrint(context.Background(), recordPrintCmd(m.form, m.designs, m.spools, m.usageRows))
 	return err
 }
@@ -185,8 +256,12 @@ func (m *printsModel) removeUsageRow() {
 
 // applyDraft re-prefills the estimates when the design or the quantity moves.
 // A field the operator has typed into keeps what they typed, so a corrected
-// quantity never overwrites an actual read off the printer.
+// quantity never overwrites an actual read off the printer. An edit form is
+// never re-prefilled: every field on it is already an actual.
 func (m *printsModel) applyDraft() {
+	if m.editing != nil {
+		return
+	}
 	key := m.form.Value(domain.FieldDesignID) + "|" + m.form.Value(domain.FieldQuantity)
 	if key == m.drafted {
 		return
@@ -210,12 +285,20 @@ func (m *printsModel) reprice() {
 	}
 	m.priced = key
 
-	preview, err := m.app.PreviewPrint(context.Background(), cmd)
+	preview, err := m.previewOf(cmd)
 	if err != nil {
 		m.loadErr = err
 		return
 	}
 	m.preview = preview
+}
+
+func (m printsModel) previewOf(cmd app.RecordPrintCmd) (app.PrintPreviewView, error) {
+	if m.editing != nil {
+		return m.app.PreviewEditPrint(context.Background(),
+			app.EditPrintCmd{PrintID: m.editing.ID, RecordPrintCmd: cmd})
+	}
+	return m.app.PreviewPrint(context.Background(), cmd)
 }
 
 // costInputs names every field the breakdown reads, so a key that moves none of
@@ -244,7 +327,7 @@ func (m printsModel) View() string {
 	}
 
 	fmt.Fprintf(&b, printRow, "  ",
-		"DATE", "DESIGN", "COPIES", "TIME", "GRAMS", "JOB COST", "PER COPY")
+		"DATE", "DESIGN", "COPIES", "AVAIL", "TIME", "GRAMS", "JOB COST", "PER COPY")
 	for i, row := range m.rows {
 		marker := "  "
 		if i == m.cursor {
@@ -254,10 +337,15 @@ func (m printsModel) View() string {
 			unit.FormatDate(row.Date),
 			truncate(row.DesignName, 16),
 			unit.FormatCopies(row.Quantity),
+			unit.FormatCopies(row.AvailableCopies),
 			unit.FormatMinutes(row.Minutes),
 			unit.FormatGrams(row.UsedGrams),
 			currency+unit.FormatCents(row.Cost.JobCost),
 			currency+unit.FormatCents(row.Cost.CostPerCopy))
+	}
+	if m.confirm != nil {
+		b.WriteString("\n")
+		b.WriteString(m.confirm.View())
 	}
 	return b.String()
 }

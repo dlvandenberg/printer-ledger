@@ -20,14 +20,14 @@ cannot be deleted, and neither can a Spool that a Print has drawn from. Every de
 
 **Blocked by:** 06
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Gifted, kept and scrapped counts are recorded per Print and persist
-- [ ] Available is shown per Print and derives from quantity minus everything accounted for
-- [ ] Accounting for more copies than the Print produced is rejected
-- [ ] A Print can be edited in place; changing its grams recomputes the spool's remaining and re-validates the invariant
-- [ ] Quantity cannot shrink below the copies already sold, gifted, kept or scrapped
-- [ ] A Print with any accounted-for copy cannot be deleted, and the error says which copies are in the way
-- [ ] A Spool that a Print has drawn from cannot be deleted
-- [ ] Deletion is confirmed before it happens
-- [ ] Per-copy cost divides across all copies including scrapped ones
+- [x] Gifted, kept and scrapped counts are recorded per Print and persist
+- [x] Available is shown per Print and derives from quantity minus everything accounted for
+- [x] Accounting for more copies than the Print produced is rejected
+- [x] A Print can be edited in place; changing its grams recomputes the spool's remaining and re-validates the invariant
+- [x] Quantity cannot shrink below the copies already sold, gifted, kept or scrapped
+- [x] A Print with any accounted-for copy cannot be deleted, and the error says which copies are in the way
+- [x] A Spool that a Print has drawn from cannot be deleted
+- [x] Deletion is confirmed before it happens
+- [x] Per-copy cost divides across all copies including scrapped ones

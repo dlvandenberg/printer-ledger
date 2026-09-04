@@ -12,6 +12,7 @@ type SpoolRepository interface {
 	UpdateSpool(ctx context.Context, s Spool) (Spool, error)
 	SpoolLedgers(ctx context.Context) ([]SpoolLedger, error)
 	SpoolLedger(ctx context.Context, id int64) (SpoolLedger, error)
+	DeleteSpool(ctx context.Context, id int64) error
 	CreateSpoolAdjustment(ctx context.Context, a SpoolAdjustment) (SpoolAdjustment, error)
 	SpoolAdjustments(ctx context.Context, spoolID int64) ([]SpoolAdjustment, error)
 }
@@ -25,8 +26,10 @@ type DesignRepository interface {
 
 type PrintRepository interface {
 	CreatePrint(ctx context.Context, p Print) (Print, error)
-	Prints(ctx context.Context) ([]Print, error)
-	Print(ctx context.Context, id int64) (Print, error)
+	UpdatePrint(ctx context.Context, p Print) (Print, error)
+	DeletePrint(ctx context.Context, id int64) error
+	PrintLedgers(ctx context.Context) ([]PrintLedger, error)
+	PrintLedger(ctx context.Context, id int64) (PrintLedger, error)
 }
 
 type SettingsRepository interface {

@@ -68,6 +68,26 @@ UPDATE spools
 	return sp, nil
 }
 
+// DeleteSpool takes the Spool's Adjustments with it: they are corrections to
+// this Spool and mean nothing without it (ADR-0022).
+func (s *Store) DeleteSpool(ctx context.Context, id int64) error {
+	if _, err := s.q().ExecContext(ctx, `DELETE FROM spool_adjustments WHERE spool_id = ?`, id); err != nil {
+		return fmt.Errorf("delete spool %d: %w", id, err)
+	}
+	res, err := s.q().ExecContext(ctx, `DELETE FROM spools WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete spool %d: %w", id, err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete spool %d: %w", id, err)
+	}
+	if affected == 0 {
+		return fmt.Errorf("spool %d: %w", id, domain.ErrNotFound)
+	}
+	return nil
+}
+
 func (s *Store) SpoolLedgers(ctx context.Context) ([]domain.SpoolLedger, error) {
 	rows, err := s.q().QueryContext(ctx, spoolLedgerQuery+` ORDER BY s.purchase_date DESC, s.id DESC`)
 	if err != nil {

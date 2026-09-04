@@ -601,3 +601,43 @@ func TestSpoolDetailListsAdjustmentsAsRecorded(t *testing.T) {
 		t.Errorf("last DerivedRemaining = %d, want the spool's remaining %d", got, detail.Spool.RemainingGrams)
 	}
 }
+
+func TestDeleteSpoolBlockedWhenAPrintDrewFromIt(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+	recordedPrint(t, a, printOf(design.ID, spool.ID))
+
+	err := a.DeleteSpool(ctx(), spool.ID)
+	if !errors.Is(err, domain.ErrSpoolDrawnFrom) {
+		t.Fatalf("DeleteSpool error = %v, want ErrSpoolDrawnFrom", err)
+	}
+
+	spools, err := a.ListSpools(ctx())
+	if err != nil {
+		t.Fatalf("ListSpools: %v", err)
+	}
+	if len(spools) != 1 {
+		t.Errorf("ListSpools returned %d spools, want 1", len(spools))
+	}
+}
+
+func TestDeleteSpoolTakesItsAdjustments(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	if _, err := a.ReweighSpool(ctx(), reweigh(spool.ID, "1100")); err != nil {
+		t.Fatalf("ReweighSpool: %v", err)
+	}
+
+	if err := a.DeleteSpool(ctx(), spool.ID); err != nil {
+		t.Fatalf("DeleteSpool: %v", err)
+	}
+
+	spools, err := a.ListSpools(ctx())
+	if err != nil {
+		t.Fatalf("ListSpools: %v", err)
+	}
+	if len(spools) != 0 {
+		t.Errorf("ListSpools returned %d spools, want 0", len(spools))
+	}
+}

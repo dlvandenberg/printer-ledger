@@ -40,7 +40,7 @@ func newReweighForm() *form {
 		{Key: domain.FieldMeasuredGrams, Label: "Weight on the scale", Placeholder: "610"},
 		{
 			Key:         domain.FieldAdjustedOn,
-			Label:       "Date",
+			Label:       dateLabel,
 			Placeholder: unit.DateLayout,
 			Prefill:     unit.FormatDate(unit.Today()),
 		},

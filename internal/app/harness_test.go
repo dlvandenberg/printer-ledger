@@ -244,3 +244,32 @@ func printOfRows(designID int64, rows ...app.FilamentUsageCmd) app.RecordPrintCm
 func usage(spoolID int64, grams string) app.FilamentUsageCmd {
 	return app.FilamentUsageCmd{SpoolID: spoolID, Grams: grams}
 }
+
+func editOfPrint(p app.PrintView) app.EditPrintCmd {
+	usages := make([]app.FilamentUsageCmd, 0, len(p.Usages))
+	for _, u := range p.Usages {
+		usages = append(usages, usage(u.SpoolID, unit.FormatGrams(u.Grams)))
+	}
+	return app.EditPrintCmd{
+		PrintID: p.ID,
+		RecordPrintCmd: app.RecordPrintCmd{
+			DesignID: p.DesignID,
+			Date:     unit.FormatDate(p.Date),
+			Quantity: unit.FormatCopies(p.Quantity),
+			Minutes:  unit.FormatHHmm(p.Minutes),
+			Gifted:   unit.FormatCopies(p.GiftedCount),
+			Kept:     unit.FormatCopies(p.KeptCount),
+			Scrapped: unit.FormatCopies(p.ScrappedCount),
+			Usages:   usages,
+		},
+	}
+}
+
+func recordedPrint(t *testing.T, a *app.App, cmd app.RecordPrintCmd) app.PrintView {
+	t.Helper()
+	view, err := a.RecordPrint(ctx(), cmd)
+	if err != nil {
+		t.Fatalf("RecordPrint: %v", err)
+	}
+	return view
+}

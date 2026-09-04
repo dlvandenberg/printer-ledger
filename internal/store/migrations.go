@@ -92,6 +92,13 @@ CREATE TABLE filament_usages (
 CREATE INDEX filament_usages_spool ON filament_usages(spool_id);
 CREATE INDEX filament_usages_print ON filament_usages(print_id);`,
 	},
+	{
+		name: "0006_print_stock_counts",
+		sql: `
+ALTER TABLE prints ADD COLUMN gifted_count   INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE prints ADD COLUMN kept_count     INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE prints ADD COLUMN scrapped_count INTEGER NOT NULL DEFAULT 0;`,
+	},
 }
 
 func (s *Store) migrate(ctx context.Context) error {

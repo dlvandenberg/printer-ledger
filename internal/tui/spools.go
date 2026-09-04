@@ -21,6 +21,7 @@ type spoolsModel struct {
 	cursor  int
 	detail  *app.SpoolDetailView
 	form    *form
+	confirm *confirm
 	loadErr error
 }
 
@@ -44,11 +45,14 @@ func (m *spoolsModel) reload() error {
 	return nil
 }
 
-func (m spoolsModel) CapturesInput() bool { return m.form != nil }
+func (m spoolsModel) CapturesInput() bool { return m.form != nil || m.confirm != nil }
 
 func (m spoolsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	if m.form != nil {
 		return m.updateForm(msg)
+	}
+	if m.confirm != nil {
+		return m.updateConfirm(msg)
 	}
 
 	if m.detail != nil {
@@ -58,6 +62,10 @@ func (m spoolsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	switch msg.String() {
 	case KeyA:
 		m.form = newSpoolForm()
+	case KeyD:
+		if len(m.rows) > 0 {
+			m.askDelete(m.rows[m.cursor])
+		}
 	case KeyEnter:
 		if len(m.rows) > 0 {
 			m.openDetail(m.rows[m.cursor].ID)
@@ -69,6 +77,27 @@ func (m spoolsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	case KeyDown, KeyJ:
 		if m.cursor < len(m.rows)-1 {
 			m.cursor++
+		}
+	}
+	return m, nil
+}
+
+func (m *spoolsModel) askDelete(spool app.SpoolView) {
+	m.loadErr = nil
+	m.confirm = newConfirm(
+		fmt.Sprintf("Delete the %s spool %s %s?", spool.FilamentType, spool.Brand, spool.Color),
+		func() error { return m.app.DeleteSpool(context.Background(), spool.ID) })
+}
+
+func (m spoolsModel) updateConfirm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	confirmed, deleted, err := m.confirm.Answer(msg)
+	m.confirm = confirmed
+	switch {
+	case err != nil:
+		m.loadErr = err
+	case deleted:
+		if err := m.reload(); err != nil {
+			m.loadErr = err
 		}
 	}
 	return m, nil
@@ -164,6 +193,10 @@ func (m spoolsModel) View() string {
 			currency+unit.FormatCents(row.RemainingValue),
 			row.State)
 	}
+	if m.confirm != nil {
+		b.WriteString("\n")
+		b.WriteString(m.confirm.View())
+	}
 	return b.String()
 }
 
@@ -178,10 +211,17 @@ func (m spoolsModel) Help() string {
 	if m.form != nil {
 		return m.form.Help()
 	}
+	if m.confirm != nil {
+		return m.confirm.Help()
+	}
 	if m.detail != nil {
 		return fmt.Sprintf("%s re-weigh · %s back · %s", KeyR, KeyEsc, globalHelp)
 	}
-	return fmt.Sprintf("%s add · %s detail · %s/%s move · %s", KeyA, KeyEnter, KeyUp, KeyDown, globalHelp)
+	var rowHelp string
+	if len(m.rows) > 0 {
+		rowHelp = fmt.Sprintf(" · %s detail · %s delete", KeyEnter, KeyD)
+	}
+	return fmt.Sprintf("%s add%s · %s/%s move · %s", KeyA, rowHelp, KeyUp, KeyDown, globalHelp)
 }
 
 func (m spoolsModel) Refresh() tabModel {

@@ -201,6 +201,19 @@ func (a *App) ReweighSpool(ctx context.Context, cmd ReweighSpoolCmd) (SpoolDetai
 	return view, nil
 }
 
+func (a *App) DeleteSpool(ctx context.Context, id int64) error {
+	return a.db.InTx(ctx, func(tx domain.Database) error {
+		ledger, err := tx.SpoolLedger(ctx, id)
+		if err != nil {
+			return err
+		}
+		if err := ledger.DeleteBlocked(); err != nil {
+			return err
+		}
+		return tx.DeleteSpool(ctx, id)
+	})
+}
+
 func parseReweighSpool(cmd ReweighSpoolCmd) (unit.Grams, time.Time, error) {
 	errs := &domain.ValidationError{}
 	var (

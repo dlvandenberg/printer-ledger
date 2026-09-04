@@ -11,6 +11,8 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 )
 
+const dateLabel = "Date"
+
 const (
 	labelWidth     = 24
 	fieldWidth     = 24
