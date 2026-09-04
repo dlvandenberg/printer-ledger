@@ -66,8 +66,8 @@ two Spools of one **Filament Type**.
 |---|---|
 | `filamentType` | **Filament Type** |
 | `brand`, `color` | Identification |
-| `initialGrams` | Filament grams when bought, stored as hundredths of a gram |
-| `tareGrams` | Weight of the empty spool, used to interpret scale readings |
+| `initialGrams` | Filament grams when bought; entry takes two decimals, stored as hundredths of a gram |
+| `tareGrams` | Weight of the empty spool, used to interpret scale readings; entry takes two decimals |
 | `purchaseCostCents` | What was paid |
 | `purchaseDate` | When |
 
@@ -102,7 +102,7 @@ from the spool's `tareGrams`.
 
 | Field | Meaning |
 |---|---|
-| `measuredGrams` | Total weight on the scale (filament + spool) |
+| `measuredGrams` | Total weight on the scale (filament + spool); entry takes two decimals |
 | `derivedRemaining` | `measuredGrams − tareGrams` |
 | `deltaGrams` | `derivedRemaining` minus the previously computed remaining |
 | `date`, `note` | Provenance |
@@ -148,7 +148,7 @@ A printable model, and the only place a price is decided.
 | Field | Meaning |
 |---|---|
 | `name` | Identification |
-| `estimatedGrams` | Slicer filament estimate **for one copy** |
+| `estimatedGrams` | Slicer filament estimate **for one copy**; entry takes two decimals, as the slicer reports it |
 | `estimatedMinutes` | Slicer time estimate **for one copy** |
 | `defaultFilamentType` | The **Filament Type** this design is normally printed in |
 | `marginPct` | Margin used for **Suggested Price**. Seeded from `Settings.defaultMargin` at creation, edited freely thereafter |
@@ -248,7 +248,8 @@ Avoid: "job", "plate".
 
 ### Filament Usage
 
-A child of **Print**: `{ spoolID, grams, costPerGramCents }`. A Print holds one or more.
+A child of **Print**: `{ spoolID, grams, costPerGramCents }`. A Print holds one or more. `grams`
+is entered with two decimals, like every other weight.
 
 `costPerGram` is copied from the **Spool** at creation and never changes, so correcting a
 spool's purchase price affects later prints only. It is held in hundredths of a cent per gram: a

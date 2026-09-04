@@ -418,3 +418,29 @@ func TestDesignQuoteRoundsFilamentUpToTheWholeCent(t *testing.T) {
 		t.Errorf("Filament = %d, want 203", got)
 	}
 }
+
+func TestDesignQuoteCostsAFractionalEstimateToTheCent(t *testing.T) {
+	a := newApp(t)
+	if _, err := a.AddSpool(ctx(), spoolPriced(domain.PLA, "1000", "22.00")); err != nil {
+		t.Fatalf("AddSpool: %v", err)
+	}
+	cmd := quotedDesign()
+	cmd.EstimatedGrams = "85.59"
+	design := addedDesign(t, a, cmd)
+
+	quote, err := a.DesignQuote(ctx(), design.ID)
+	if err != nil {
+		t.Fatalf("DesignQuote: %v", err)
+	}
+
+	row := quoteRow(t, quote, domain.PLA)
+	if row.Filament != 189 {
+		t.Errorf("Filament = %d, want 189", row.Filament)
+	}
+	if row.Total != 292 {
+		t.Errorf("Total = %d, want 292", row.Total)
+	}
+	if quote.SuggestedPrice != 450 {
+		t.Errorf("SuggestedPrice = %d, want 450", quote.SuggestedPrice)
+	}
+}

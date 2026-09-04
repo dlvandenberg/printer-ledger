@@ -231,3 +231,21 @@ func TestPreviewEditPrintCostsAtTheFrozenRates(t *testing.T) {
 		t.Errorf("JobCost = %d, want 471", preview.Cost.JobCost)
 	}
 }
+
+func TestEditPrintRoundTripsAFractionalUsageRow(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	cmd := printOf(design.ID, spool.ID)
+	cmd.Usages[0].Grams = "85.59"
+	recorded := recordedPrint(t, a, cmd)
+
+	edited, err := a.EditPrint(ctx(), editOfPrint(recorded))
+	if err != nil {
+		t.Fatalf("EditPrint: %v", err)
+	}
+	if edited.UsedGrams != recorded.UsedGrams {
+		t.Errorf("UsedGrams = %d, want %d", edited.UsedGrams, recorded.UsedGrams)
+	}
+}

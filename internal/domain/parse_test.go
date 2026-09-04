@@ -76,10 +76,17 @@ func TestParseGrams(t *testing.T) {
 		{in: "750g", want: 75_000},
 		{in: "0", want: 0},
 		{in: "-1", want: -100},
+		{in: "85.59", want: 8559},
+		{in: "85.5", want: 8550},
+		{in: "85,59g", want: 8559},
+		{in: " 85.59 g ", want: 8559},
+		{in: "0.01", want: 1},
 		{in: "", wantErr: true},
-		{in: "1.5", wantErr: true},
+		{in: "85.594", wantErr: true},
 		{in: "lots", wantErr: true},
 		{in: "200000000000000000", wantErr: true},
+		{in: "-200000000000000000", wantErr: true},
+		{in: "92233720368547758.08", wantErr: true},
 	}
 
 	for _, tc := range tests {
@@ -109,6 +116,10 @@ func TestFormatGrams(t *testing.T) {
 		{in: 21_000, want: "210g"},
 		{in: 0, want: "0g"},
 		{in: -60_000, want: "-600g"},
+		{in: 8559, want: "85.59g"},
+		{in: 8550, want: "85.5g"},
+		{in: 1, want: "0.01g"},
+		{in: 171_180, want: "1711.8g"},
 	}
 
 	for _, tc := range tests {

@@ -489,3 +489,82 @@ func TestPreviewPrintReportsNoRateForAnEmptyForm(t *testing.T) {
 		t.Error("RateSeeded is true, want no warning with no spool picked")
 	}
 }
+
+func TestRecordPrintKeepsAFractionalUsageRow(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	cmd := printOf(design.ID, spool.ID)
+	cmd.Usages[0].Grams = "85.59"
+
+	got := recordedPrint(t, a, cmd)
+	if got.UsedGrams != 8559 {
+		t.Errorf("UsedGrams = %d, want 8559", got.UsedGrams)
+	}
+	if got.Cost.Filament != 188 {
+		t.Errorf("Filament = %d, want 188", got.Cost.Filament)
+	}
+	if remaining := remainingOf(t, a, spool.ID); remaining != 91_441 {
+		t.Errorf("RemainingGrams = %d, want 91441", remaining)
+	}
+}
+
+func TestRecordPrintRoundsFilamentOnceOverFractionalRows(t *testing.T) {
+	a := newApp(t)
+	first := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	second := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	got := recordedPrint(t, a, printOfRows(design.ID,
+		usage(first.ID, "85.59"), usage(second.ID, "85.59")))
+	if got.Cost.Filament != 377 {
+		t.Errorf("Filament = %d, want 377", got.Cost.Filament)
+	}
+}
+
+func TestRecordPrintRejectsAnOverPreciseUsageRow(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	cmd := printOf(design.ID, spool.ID)
+	cmd.Usages[0].Grams = "85.594"
+
+	if _, err := a.RecordPrint(ctx(), cmd); err == nil {
+		t.Fatal("expected RecordPrint to be rejected")
+	} else if msg := fieldError(t, err, domain.FieldUsageGrams(0)); msg != unit.ErrMalformedGrams.Error() {
+		t.Errorf("usage grams error = %q, want %q", msg, unit.ErrMalformedGrams)
+	}
+}
+
+func TestPrintDraftPrefillsTheTrueMultipleOfAFractionalEstimate(t *testing.T) {
+	a := newApp(t)
+	cmd := quotedDesign()
+	cmd.EstimatedGrams = "85.59"
+	design := addedDesign(t, a, cmd)
+
+	draft, err := a.PrintDraft(ctx(), design.ID, "20")
+	if err != nil {
+		t.Fatalf("PrintDraft: %v", err)
+	}
+	if draft.Grams != 171_180 {
+		t.Errorf("Grams = %d, want 171180", draft.Grams)
+	}
+	if got := unit.FormatGrams(draft.Grams); got != "1711.8g" {
+		t.Errorf("FormatGrams = %q, want \"1711.8g\"", got)
+	}
+}
+
+func TestRecordPrintAcceptsACommaTypedUsageRow(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	cmd := printOf(design.ID, spool.ID)
+	cmd.Usages[0].Grams = "85,59g"
+
+	if got := recordedPrint(t, a, cmd); got.UsedGrams != 8559 {
+		t.Errorf("UsedGrams = %d, want 8559", got.UsedGrams)
+	}
+}

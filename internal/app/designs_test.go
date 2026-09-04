@@ -273,7 +273,7 @@ func TestAddDesignRejectsMalformedInput(t *testing.T) {
 		{"empty filament type", func(c *app.AddDesignCmd) { c.DefaultFilamentType = "" }, domain.FieldDefaultFilamentType},
 		{"zero grams", func(c *app.AddDesignCmd) { c.EstimatedGrams = "0" }, domain.FieldEstimatedGrams},
 		{"negative grams", func(c *app.AddDesignCmd) { c.EstimatedGrams = "-1" }, domain.FieldEstimatedGrams},
-		{"fractional grams", func(c *app.AddDesignCmd) { c.EstimatedGrams = "48.5" }, domain.FieldEstimatedGrams},
+		{"over-precise grams", func(c *app.AddDesignCmd) { c.EstimatedGrams = "48.594" }, domain.FieldEstimatedGrams},
 		{"empty grams", func(c *app.AddDesignCmd) { c.EstimatedGrams = "" }, domain.FieldEstimatedGrams},
 		{"print time without a colon", func(c *app.AddDesignCmd) { c.EstimatedMinutes = "331" }, domain.FieldEstimatedMinutes},
 		{"print time in words", func(c *app.AddDesignCmd) { c.EstimatedMinutes = "5h 31m" }, domain.FieldEstimatedMinutes},
@@ -330,7 +330,7 @@ func TestAddDesignReportsTheParseFailureNotTheInvariantItTrips(t *testing.T) {
 	a := newApp(t)
 
 	cmd := plaDesign()
-	cmd.EstimatedGrams = "48.5"
+	cmd.EstimatedGrams = "0.005"
 
 	_, err := a.AddDesign(ctx(), cmd)
 	if err == nil {
@@ -402,5 +402,45 @@ func TestListDesignsSurvivesAReopen(t *testing.T) {
 	}
 	if designs[0] != added {
 		t.Errorf("design = %+v, want %+v", designs[0], added)
+	}
+}
+
+func TestAddDesignKeepsTheTwoDecimalsTheSlicerReports(t *testing.T) {
+	a := newApp(t)
+
+	cmd := plaDesign()
+	cmd.EstimatedGrams = "85.59"
+
+	design := addedDesign(t, a, cmd)
+	if design.EstimatedGrams != 8559 {
+		t.Errorf("EstimatedGrams = %d, want 8559", design.EstimatedGrams)
+	}
+}
+
+func TestEditDesignRoundTripsAFractionalEstimate(t *testing.T) {
+	a := newApp(t)
+
+	cmd := plaDesign()
+	cmd.EstimatedGrams = "85.59"
+	design := addedDesign(t, a, cmd)
+
+	edited, err := a.EditDesign(ctx(), editOf(design))
+	if err != nil {
+		t.Fatalf("EditDesign: %v", err)
+	}
+	if edited.EstimatedGrams != design.EstimatedGrams {
+		t.Errorf("EstimatedGrams = %d, want %d", edited.EstimatedGrams, design.EstimatedGrams)
+	}
+}
+
+func TestAddDesignAcceptsAHundredthOfAGram(t *testing.T) {
+	a := newApp(t)
+
+	cmd := plaDesign()
+	cmd.EstimatedGrams = "0.01"
+
+	design := addedDesign(t, a, cmd)
+	if design.EstimatedGrams != 1 {
+		t.Errorf("EstimatedGrams = %d, want 1", design.EstimatedGrams)
 	}
 }

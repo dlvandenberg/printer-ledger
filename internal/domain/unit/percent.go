@@ -2,7 +2,6 @@ package unit
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -29,18 +28,4 @@ func ParsePercent(s string) (Percent, error) {
 	return Percent(value), nil
 }
 
-func FormatPercent(p Percent) string {
-	sign := ""
-	if p < 0 {
-		sign, p = "-", -p
-	}
-	whole, frac := int64(p)/100, int64(p)%100
-	switch {
-	case frac == 0:
-		return fmt.Sprintf("%s%d%%", sign, whole)
-	case frac%10 == 0:
-		return fmt.Sprintf("%s%d.%d%%", sign, whole, frac/10)
-	default:
-		return fmt.Sprintf("%s%d.%02d%%", sign, whole, frac)
-	}
-}
+func FormatPercent(p Percent) string { return formatHundredths(int64(p), "%") }

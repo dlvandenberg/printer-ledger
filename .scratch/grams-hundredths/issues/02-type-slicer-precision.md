@@ -32,16 +32,16 @@ too small to print, and any floor above zero would be a number with nothing to d
 
 **Status:** ready-for-agent
 
-- [ ] `85.59` is accepted for a design estimate, a spool's initial and tare weight, a reweigh and a
+- [x] `85.59` is accepted for a design estimate, a spool's initial and tare weight, a reweigh and a
       usage row, and the value that comes back is 85.59g
-- [ ] `85.594` is rejected on the field that was typed, with the single malformed-weight sentinel
-- [ ] A comma decimal separator and a `g` suffix are accepted, as for the other units
-- [ ] Weights display with trailing zeros trimmed, and every displayed weight parses back to itself
-- [ ] A print recorded for twenty copies of an 85.59g design prefills 1711.8g
-- [ ] A weight of 0.01g is legal; zero and negative weights are still refused with their existing
+- [x] `85.594` is rejected on the field that was typed, with the single malformed-weight sentinel
+- [x] A comma decimal separator and a `g` suffix are accepted, as for the other units
+- [x] Weights display with trailing zeros trimmed, and every displayed weight parses back to itself
+- [x] A print recorded for twenty copies of an 85.59g design prefills 1711.8g
+- [x] A weight of 0.01g is legal; zero and negative weights are still refused with their existing
       messages
-- [ ] A quote and a print cost built from a fractional estimate are correct to the cent, rounding
+- [x] A quote and a print cost built from a fractional estimate are correct to the cent, rounding
       once at the end
-- [ ] ADR-0002 covers grams, the conventions doc distinguishes amending an ADR from superseding one
+- [x] ADR-0002 covers grams, the conventions doc distinguishes amending an ADR from superseding one
       and its unit example matches the code, and the glossary says entry takes two decimals
-- [ ] `make lint` and `make test` pass
+- [x] `make lint` and `make test` pass

@@ -183,7 +183,7 @@ func TestAddSpoolValidation(t *testing.T) {
 		{"empty purchase date", func(c *app.AddSpoolCmd) { c.PurchaseDate = "" }, domain.FieldPurchaseDate},
 		{"malformed purchase cost", func(c *app.AddSpoolCmd) { c.PurchaseCost = "22.000" }, domain.FieldPurchaseCost},
 		{"empty purchase cost", func(c *app.AddSpoolCmd) { c.PurchaseCost = "" }, domain.FieldPurchaseCost},
-		{"fractional initial grams", func(c *app.AddSpoolCmd) { c.InitialGrams = "1.5g" }, domain.FieldInitialGrams},
+		{"over-precise initial grams", func(c *app.AddSpoolCmd) { c.InitialGrams = "1.555g" }, domain.FieldInitialGrams},
 		{"malformed tare grams", func(c *app.AddSpoolCmd) { c.TareGrams = "heavy" }, domain.FieldTareGrams},
 		{"out of range purchase date", func(c *app.AddSpoolCmd) { c.PurchaseDate = "2026-13-01" }, domain.FieldPurchaseDate},
 		{"malformed purchase date", func(c *app.AddSpoolCmd) { c.PurchaseDate = "01-08-2026" }, domain.FieldPurchaseDate},
@@ -323,7 +323,7 @@ func TestAddSpoolReportsTheParseFailureNotTheInvariantItTrips(t *testing.T) {
 	a := newApp(t)
 
 	cmd := plaSpool()
-	cmd.InitialGrams = "1.5g"
+	cmd.InitialGrams = "0.005g"
 
 	_, err := a.AddSpool(ctx(), cmd)
 	if err == nil {
@@ -491,7 +491,7 @@ func TestReweighSpoolValidation(t *testing.T) {
 		field string
 	}{
 		{"malformed measured grams", func(c *app.ReweighSpoolCmd) { c.MeasuredGrams = "half" }, domain.FieldMeasuredGrams},
-		{"fractional measured grams", func(c *app.ReweighSpoolCmd) { c.MeasuredGrams = "610.5" }, domain.FieldMeasuredGrams},
+		{"over-precise measured grams", func(c *app.ReweighSpoolCmd) { c.MeasuredGrams = "610.555" }, domain.FieldMeasuredGrams},
 		{"empty measured grams", func(c *app.ReweighSpoolCmd) { c.MeasuredGrams = "" }, domain.FieldMeasuredGrams},
 		{"negative measured grams", func(c *app.ReweighSpoolCmd) { c.MeasuredGrams = "-1" }, domain.FieldMeasuredGrams},
 		{"empty date", func(c *app.ReweighSpoolCmd) { c.AdjustedOn = "" }, domain.FieldAdjustedOn},
@@ -669,5 +669,62 @@ func TestDeleteSpoolTakesItsAdjustments(t *testing.T) {
 	}
 	if len(spools) != 0 {
 		t.Errorf("ListSpools returned %d spools, want 0", len(spools))
+	}
+}
+
+func TestAddSpoolKeepsFractionalInitialAndTareWeights(t *testing.T) {
+	a := newApp(t)
+
+	cmd := plaSpool()
+	cmd.InitialGrams = "1000.5"
+	cmd.TareGrams = "210.25"
+
+	spool := addedSpool(t, a, cmd)
+	if spool.InitialGrams != 100_050 {
+		t.Errorf("InitialGrams = %d, want 100050", spool.InitialGrams)
+	}
+	if spool.TareGrams != 21_025 {
+		t.Errorf("TareGrams = %d, want 21025", spool.TareGrams)
+	}
+}
+
+func TestEditSpoolRoundTripsFractionalWeights(t *testing.T) {
+	a := newApp(t)
+
+	cmd := plaSpool()
+	cmd.InitialGrams = "1000.5"
+	cmd.TareGrams = "210.25"
+	spool := addedSpool(t, a, cmd)
+
+	edited, err := a.EditSpool(ctx(), editOfSpool(spool))
+	if err != nil {
+		t.Fatalf("EditSpool: %v", err)
+	}
+	if edited.InitialGrams != spool.InitialGrams {
+		t.Errorf("InitialGrams = %d, want %d", edited.InitialGrams, spool.InitialGrams)
+	}
+	if edited.TareGrams != spool.TareGrams {
+		t.Errorf("TareGrams = %d, want %d", edited.TareGrams, spool.TareGrams)
+	}
+}
+
+func TestReweighSpoolDerivesRemainingFromAFractionalReading(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, plaSpool())
+
+	detail, err := a.ReweighSpool(ctx(), reweigh(spool.ID, "610.55"))
+	if err != nil {
+		t.Fatalf("ReweighSpool: %v", err)
+	}
+	if detail.Spool.RemainingGrams != 40_055 {
+		t.Errorf("RemainingGrams = %d, want 40055", detail.Spool.RemainingGrams)
+	}
+
+	got := detail.Adjustments[0]
+	if got.MeasuredGrams != 61_055 {
+		t.Errorf("MeasuredGrams = %d, want 61055", got.MeasuredGrams)
+	}
+	if got.DerivedRemaining != 40_055 {
+		t.Errorf("DerivedRemaining = %d, want 40055", got.DerivedRemaining)
 	}
 }

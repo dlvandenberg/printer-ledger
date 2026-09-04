@@ -28,7 +28,7 @@ Every quantity with a unit gets a named type in `internal/domain`: `Cents`, `Gra
 ```go
 type Grams int64
 
-var ErrMalformedGrams = errors.New("not a whole number of grams")
+var ErrMalformedGrams = errors.New("not a weight, expected e.g. 85.59")
 
 func ParseGrams(s string) (Grams, error)
 func FormatGrams(g Grams) string
@@ -187,7 +187,9 @@ subject. One behavioural change per commit; a rename is its own commit.
 
 - A decision with a live alternative becomes an ADR: `docs/adr/NNNN-slug.md`, sections
   **Status** (`Accepted — YYYY-MM-DD`), **Context**, **Decision**, **Consequences**, prose wrapped
-  at 100 columns. ADRs are immutable once accepted — supersede, don't edit.
+  at 100 columns. Reversing an accepted decision is a supersede: a new ADR that points back.
+  Extending one to another case is an amendment: edit the ADR in place, note it in **Status**
+  (`Accepted — 2026-08-25 (amended 2026-09-04: weight)`), so there stays one place to look.
 - A new or sharpened term becomes a `CONTEXT.md` glossary entry, with the synonyms to avoid.
 - Work in progress lives in `.scratch/<feature-slug>/` (see `docs/agents/issue-tracker.md`), not in
   code comments and not in `docs/`.
