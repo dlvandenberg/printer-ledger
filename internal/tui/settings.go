@@ -88,7 +88,6 @@ func (m settingsModel) View() string {
 	b.WriteString(titleStyle.Render("Settings"))
 	b.WriteString("\n\n")
 
-	money := func(c unit.Cents) string { return currency + unit.FormatCents(c) }
 	rows := [][2]string{
 		{"Electricity per kWh", money(m.view.KwhPrice)},
 		{"Machine per hour", money(m.view.MachineHourlyRate)},

@@ -24,15 +24,15 @@ No custom date ranges, no charts.
 
 **Blocked by:** 09
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Four periods: this month, last month, this year, all time
-- [ ] Revenue, cost of copies sold, profit, margin percentage and copies sold for the period
-- [ ] A copy printed in one period and sold in another is costed into the period it sold in
-- [ ] Period boundaries are correct for a sale on the first and on the last day of a month
-- [ ] Production cost for the period on its own labelled line
-- [ ] Gifted, kept and scrapped copies on their own line
-- [ ] Designs ranked by profit on the matched basis
-- [ ] Break-even progress, counting the printer, all spool spend including filament not yet printed, and energy
-- [ ] Break-even and period profit are labelled as different measures
-- [ ] An Inventory block showing unsold copies and their cost value, and spool grams and their value
+- [x] Four periods: this month, last month, this year, all time
+- [x] Revenue, cost of copies sold, profit, margin percentage and copies sold for the period
+- [x] A copy printed in one period and sold in another is costed into the period it sold in
+- [x] Period boundaries are correct for a sale on the first and on the last day of a month
+- [x] Production cost for the period on its own labelled line
+- [x] Gifted, kept and scrapped copies on their own line
+- [x] Designs ranked by profit on the matched basis
+- [x] Break-even progress, counting the printer, all spool spend including filament not yet printed, and energy
+- [x] Break-even and period profit are labelled as different measures
+- [x] An Inventory block showing unsold copies and their cost value, and spool grams and their value

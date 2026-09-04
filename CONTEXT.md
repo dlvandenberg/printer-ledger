@@ -350,6 +350,15 @@ The floor is a thing said while the price is being typed, never a verdict re-pas
 `costPerCopy` is frozen on the **Print**, but `minMargin` is read from current Settings, so a
 recorded Sale carries its price and its cost and no stored flag.
 
+### Period
+
+The span the report is read over: **this month**, **last month**, **this year** or **all time**.
+There are no custom ranges. A period is half-open — a date on its first day is in it, a date on the
+first day of the next one is not — so a **Sale** on the last day of a month cannot also count in the
+next. All time is bounded at neither end.
+
+**Break-Even** and **Inventory** ignore the selected Period: both are all-time by definition.
+
 ### Cost math
 
 All money is `int64` minor units (cents). Never floats for money. Round only at the end.
@@ -401,11 +410,15 @@ is where the cash view lives.
 
 ## Reporting
 
-Periods: this month, last month, this year, all time.
+Periods: see **Period** — this month, last month, this year, all time.
 
 Per period: revenue, cost of copies sold, profit, margin %, copies sold, a separate production
 cost line for Prints made in the period, a gifted/kept/scrapped line, and Designs ranked by
 profit on the same matched basis.
+
+Revenue, cost of copies sold, profit, margin % and the Design ranking are matched to the **Sale**
+date. Production cost and the gifted/kept/scrapped line are scoped by the **Print** date instead:
+those copies never sold, so there is no sale to match them to (ADR-0023).
 
 Always visible: **Break-Even** progress, plus a Inventory block — unsold copies and their cost value,
 Spool remaining grams and value.

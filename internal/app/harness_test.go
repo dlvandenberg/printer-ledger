@@ -329,3 +329,39 @@ func availableOf(t *testing.T, a *app.App, printID int64) unit.Copies {
 	t.Helper()
 	return printByID(t, a, printID).AvailableCopies
 }
+
+// firstOfMonth walks whole months off the first of this one, so a test names a
+// period rather than a date and cannot drift into another month as the real
+// clock moves.
+func firstOfMonth(offset int) time.Time {
+	today := unit.Today()
+	return time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, today.Location()).AddDate(0, offset, 0)
+}
+
+func dayOfMonth(offset, day int) string {
+	return unit.FormatDate(firstOfMonth(offset).AddDate(0, 0, day-1))
+}
+
+func lastDayOfMonth(offset int) string {
+	return unit.FormatDate(firstOfMonth(offset+1).AddDate(0, 0, -1))
+}
+
+func reportOf(t *testing.T, a *app.App, period domain.Period) app.ReportView {
+	t.Helper()
+	report, err := a.Report(ctx(), app.ReportCmd{Period: period.String()})
+	if err != nil {
+		t.Fatalf("Report %s: %v", period, err)
+	}
+	return report
+}
+
+func designProfit(t *testing.T, report app.ReportView, name string) app.DesignProfitView {
+	t.Helper()
+	for _, d := range report.Designs {
+		if d.DesignName == name {
+			return d
+		}
+	}
+	t.Fatalf("no ranked design named %q", name)
+	return app.DesignProfitView{}
+}

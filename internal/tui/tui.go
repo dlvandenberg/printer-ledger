@@ -52,12 +52,17 @@ func Run(a *app.App) error {
 		return err
 	}
 
+	report, err := newReportModel(a)
+	if err != nil {
+		return err
+	}
+
 	m := Model{tabs: []namedTab{
 		{name: "Spools", model: spools},
 		{name: "Designs", model: designs},
 		{name: "Prints", model: prints},
 		{name: "Sales", model: sales},
-		newPlaceholder("Report"),
+		{name: "Report", model: report},
 		{name: "Settings", model: newSettingsModel(a)},
 	}}
 	_, err = tea.NewProgram(m, tea.WithAltScreen()).Run()
