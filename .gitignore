@@ -1,4 +1,5 @@
 /printer-ledger
+/data/
 *.db
 *.db-shm
 *.db-wal
