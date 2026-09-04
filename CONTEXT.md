@@ -159,6 +159,23 @@ Estimates are always per single copy. A plate of four is recorded as a **Print**
 `marginPct` is never null and has no fallback rule. Raising `Settings.defaultMargin` affects
 Designs created afterwards, never existing ones.
 
+A Design cannot be deleted while any **Print** references it.
+
+### Design Ledger
+
+A **Design** together with the number of **Prints** that reference it. A read model, not a stored
+record.
+
+| Field | Meaning |
+|---|---|
+| `design` | The **Design** itself |
+| `printCount` | How many **Prints** name it |
+
+It exists so that "has this been printed" has one definition rather than one per caller: the count
+the Designs list shows and the count that blocks a delete are the same number. A Design with a
+`printCount` above zero cannot be deleted — its cost history would lose the thing it was a history
+of.
+
 ### Estimated Cost
 
 What a **Design** would cost to print, shown as one row per **Filament Type**:
@@ -276,6 +293,26 @@ stops `quantity` being edited below what has already been accounted for.
   failure concept and no print-level status field.
 
 A **Print** cannot be deleted while any copy is sold, gifted, kept or scrapped.
+
+### Print Ledger
+
+A **Print** together with the **Sales** that reference it, counted. A read model, not a stored
+record.
+
+| Field | Meaning |
+|---|---|
+| `print` | The **Print** itself |
+| `soldCount` | Number of **Sales** referencing it |
+
+Derived:
+
+- `accountedCopies = soldCount + giftedCount + keptCount + scrappedCount`
+- `available = print.quantity − accountedCopies`
+
+It exists for the same reason as the **Spool Ledger**: the `available >= 0` invariant has one
+definition rather than one per caller. The same expression answers what the Prints list displays,
+whether an edited `quantity` would strand copies already accounted for, and whether the Print may
+be deleted at all.
 
 ### Inventory
 
