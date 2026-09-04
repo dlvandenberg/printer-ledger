@@ -177,6 +177,8 @@ func (p Print) Cost() PrintCost {
 	}
 }
 
+func (p Print) CostPerCopy() unit.Cents { return p.Cost().CostPerCopy(p.Quantity) }
+
 func (p Print) UsedGrams() unit.Grams {
 	var grams unit.Grams
 	for _, usage := range p.Usages {

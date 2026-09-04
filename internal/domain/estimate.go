@@ -66,9 +66,7 @@ func (q DesignQuote) SuggestedPrice() (unit.Cents, bool) {
 // SuggestedPrice rounds up to the nearest 50 cents, never to the nearest, so
 // the price never falls below the intended margin (ADR-0007).
 func SuggestedPrice(cost unit.Cents, margin unit.Percent) unit.Cents {
-	scaled := int64(cost) * int64(unit.PercentScale+margin)
-	step := int64(priceStepCents) * int64(unit.PercentScale)
-	return unit.Cents(ceilDiv(scaled, step) * priceStepCents)
+	return unit.Cents(ceilDiv(int64(withMargin(cost, margin)), priceStepCents) * priceStepCents)
 }
 
 // priceSpool picks the spool a Filament Type row is priced against: the most

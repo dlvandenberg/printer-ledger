@@ -332,6 +332,24 @@ unrecorded.
 
 Deleting a Sale returns its copy to `available`.
 
+### Sellable Print
+
+A **Print** with at least one copy `available`. The only Prints a **Sale** may name, which is what
+stops one physical object being sold twice. A filtered **Print Ledger**, not a stored record.
+
+A Sale being edited counts its own copy as returned first, so it keeps naming the Print it sold
+from even when that copy was the last one available.
+
+### Minimum Price
+
+`costPerCopy × (1 + Settings.minMargin)`, rounded **up** to the whole cent — the floor a **Sale**
+price is measured against. Below it the form warns inline and records anyway (ADR-0016). Rounding
+up is the same safe direction as **Suggested Price**.
+
+The floor is a thing said while the price is being typed, never a verdict re-passed on a past Sale:
+`costPerCopy` is frozen on the **Print**, but `minMargin` is read from current Settings, so a
+recorded Sale carries its price and its cost and no stored flag.
+
 ### Cost math
 
 All money is `int64` minor units (cents). Never floats for money. Round only at the end.

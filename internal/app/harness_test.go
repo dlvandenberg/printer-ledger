@@ -273,3 +273,59 @@ func recordedPrint(t *testing.T, a *app.App, cmd app.RecordPrintCmd) app.PrintVi
 	}
 	return view
 }
+
+func saleOf(printID int64) app.RecordSaleCmd {
+	return app.RecordSaleCmd{
+		PrintID: printID,
+		Price:   "5.00",
+		Date:    "2026-08-22",
+	}
+}
+
+func editOfSale(s app.SaleView) app.EditSaleCmd {
+	return app.EditSaleCmd{
+		SaleID: s.ID,
+		RecordSaleCmd: app.RecordSaleCmd{
+			PrintID: s.PrintID,
+			Price:   unit.FormatCents(s.Price),
+			Date:    unit.FormatDate(s.Date),
+		},
+	}
+}
+
+func recordedSale(t *testing.T, a *app.App, cmd app.RecordSaleCmd) app.SaleView {
+	t.Helper()
+	view, err := a.RecordSale(ctx(), cmd)
+	if err != nil {
+		t.Fatalf("RecordSale: %v", err)
+	}
+	return view
+}
+
+// stockedPrint is the reference case of CONTEXT.md end to end: one spool, the
+// quoted design, and a print of two copies costing €2.35 each.
+func stockedPrint(t *testing.T, a *app.App) app.PrintView {
+	t.Helper()
+	spool := addedSpool(t, a, plaSpool())
+	design := addedDesign(t, a, quotedDesign())
+	return recordedPrint(t, a, printOf(design.ID, spool.ID))
+}
+
+func sellablePrint(t *testing.T, a *app.App, printID int64) (app.SellablePrintView, bool) {
+	t.Helper()
+	prints, err := a.SellablePrints(ctx())
+	if err != nil {
+		t.Fatalf("SellablePrints: %v", err)
+	}
+	for _, p := range prints {
+		if p.PrintID == printID {
+			return p, true
+		}
+	}
+	return app.SellablePrintView{}, false
+}
+
+func availableOf(t *testing.T, a *app.App, printID int64) unit.Copies {
+	t.Helper()
+	return printByID(t, a, printID).AvailableCopies
+}

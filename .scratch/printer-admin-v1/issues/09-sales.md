@@ -18,13 +18,13 @@ no fees.
 
 **Blocked by:** 05, 08
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Record a Sale by picking a Print with copies available, entering a price and a date
-- [ ] The form shows the copy's actual cost and the Design's suggested price while entering
-- [ ] Recording a Sale decrements the Print's available count
-- [ ] Prints with no copies available are not offered
-- [ ] Selling the last available copy and then selling again from that Print fails
-- [ ] A price below cost plus the minimum margin warns inline and still records
-- [ ] Sales can be backdated, edited and deleted
-- [ ] Deleting a Sale returns its copy to available
+- [x] Record a Sale by picking a Print with copies available, entering a price and a date
+- [x] The form shows the copy's actual cost and the Design's suggested price while entering
+- [x] Recording a Sale decrements the Print's available count
+- [x] Prints with no copies available are not offered
+- [x] Selling the last available copy and then selling again from that Print fails
+- [x] A price below cost plus the minimum margin warns inline and still records
+- [x] Sales can be backdated, edited and deleted
+- [x] Deleting a Sale returns its copy to available

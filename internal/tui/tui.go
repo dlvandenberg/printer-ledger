@@ -47,11 +47,16 @@ func Run(a *app.App) error {
 		return err
 	}
 
+	sales, err := newSalesModel(a)
+	if err != nil {
+		return err
+	}
+
 	m := Model{tabs: []namedTab{
 		{name: "Spools", model: spools},
 		{name: "Designs", model: designs},
 		{name: "Prints", model: prints},
-		newPlaceholder("Sales"),
+		{name: "Sales", model: sales},
 		newPlaceholder("Report"),
 		{name: "Settings", model: newSettingsModel(a)},
 	}}

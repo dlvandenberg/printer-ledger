@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
@@ -94,5 +95,40 @@ func TestRecordPrintCostPerCopyIncludesScrappedCopies(t *testing.T) {
 	}
 	if view.Cost.CostPerCopy != 235 {
 		t.Errorf("CostPerCopy = %d, want 235", view.Cost.CostPerCopy)
+	}
+}
+
+func TestDeletePrintBlockedWhileACopyIsSold(t *testing.T) {
+	a := newApp(t)
+	print := stockedPrint(t, a)
+	sale := recordedSale(t, a, saleOf(print.ID))
+
+	err := a.DeletePrint(ctx(), print.ID)
+	if !errors.Is(err, domain.ErrPrintAccountedFor) {
+		t.Fatalf("DeletePrint = %v, want ErrPrintAccountedFor", err)
+	}
+
+	if err := a.DeleteSale(ctx(), sale.ID); err != nil {
+		t.Fatalf("DeleteSale: %v", err)
+	}
+	if err := a.DeletePrint(ctx(), print.ID); err != nil {
+		t.Errorf("DeletePrint after the sale was deleted: %v", err)
+	}
+}
+
+func TestEditPrintQuantityBelowSoldCountFails(t *testing.T) {
+	a := newApp(t)
+	print := stockedPrint(t, a)
+	recordedSale(t, a, saleOf(print.ID))
+	recordedSale(t, a, saleOf(print.ID))
+
+	cmd := editOfPrint(printByID(t, a, print.ID))
+	cmd.Quantity = "1"
+	_, err := a.EditPrint(ctx(), cmd)
+	if err == nil {
+		t.Fatal("EditPrint below the copies sold succeeded, want a validation error")
+	}
+	if msg := fieldError(t, err, domain.FieldQuantity); msg == "" {
+		t.Error("no error on quantity, want one naming the copies accounted for")
 	}
 }

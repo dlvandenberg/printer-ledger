@@ -99,6 +99,18 @@ ALTER TABLE prints ADD COLUMN gifted_count   INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE prints ADD COLUMN kept_count     INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE prints ADD COLUMN scrapped_count INTEGER NOT NULL DEFAULT 0;`,
 	},
+	{
+		name: "0007_sales",
+		sql: `
+CREATE TABLE sales (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    print_id    INTEGER NOT NULL REFERENCES prints(id) ON DELETE CASCADE,
+    price_cents INTEGER NOT NULL,
+    date        TEXT    NOT NULL
+);
+
+CREATE INDEX sales_print ON sales(print_id);`,
+	},
 }
 
 func (s *Store) migrate(ctx context.Context) error {

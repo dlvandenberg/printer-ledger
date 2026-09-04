@@ -10,13 +10,13 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
-// sold_count is 0 until Sales reference a Print; availability derives from it
+// sold_count counts the Sales referencing a Print; availability derives from it
 // rather than being stored (ADR-0013).
 const printLedgerQuery = `
 SELECT p.id, p.design_id, p.date, p.quantity, p.minutes,
        p.gifted_count, p.kept_count, p.scrapped_count,
        p.kwh_price_cents, p.kwh_per_hour, p.machine_rate_cents,
-       0 AS sold_count
+       (SELECT COUNT(*) FROM sales s WHERE s.print_id = p.id) AS sold_count
 FROM prints p`
 
 const filamentUsageQuery = `

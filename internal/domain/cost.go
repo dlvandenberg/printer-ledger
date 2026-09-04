@@ -14,6 +14,13 @@ func overheadCost(m unit.Minutes, rate unit.Cents) unit.Cents {
 	return unit.Cents(roundDiv(int64(m)*int64(rate), unit.MIN_IN_HOUR))
 }
 
+// withMargin adds a margin to a cost and rounds up to the whole cent. Both
+// prices the ledger quotes err in the same safe direction (ADR-0007), so they
+// scale a Percent one way rather than two.
+func withMargin(cost unit.Cents, margin unit.Percent) unit.Cents {
+	return unit.Cents(ceilDiv(int64(cost)*int64(unit.PercentScale+margin), unit.PercentScale))
+}
+
 func roundDiv(a, b int64) int64 { return (a + b/2) / b }
 
 func ceilDiv(a, b int64) int64 { return (a + b - 1) / b }

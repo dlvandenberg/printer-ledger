@@ -32,6 +32,14 @@ type PrintRepository interface {
 	PrintLedger(ctx context.Context, id int64) (PrintLedger, error)
 }
 
+type SaleRepository interface {
+	CreateSale(ctx context.Context, s Sale) (Sale, error)
+	UpdateSale(ctx context.Context, s Sale) (Sale, error)
+	DeleteSale(ctx context.Context, id int64) error
+	Sales(ctx context.Context) ([]Sale, error)
+	Sale(ctx context.Context, id int64) (Sale, error)
+}
+
 type SettingsRepository interface {
 	Settings(ctx context.Context) (Settings, error)
 	SaveSettings(ctx context.Context, s Settings) error
@@ -42,5 +50,6 @@ type Database interface {
 	SettingsRepository
 	DesignRepository
 	PrintRepository
+	SaleRepository
 	InTx(ctx context.Context, fn func(Database) error) error
 }
