@@ -4,7 +4,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
+	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
 func TestRecordPrintWithStockCountsThenList(t *testing.T) {
@@ -130,5 +132,59 @@ func TestEditPrintQuantityBelowSoldCountFails(t *testing.T) {
 	}
 	if msg := fieldError(t, err, domain.FieldQuantity); msg == "" {
 		t.Error("no error on quantity, want one naming the copies accounted for")
+	}
+}
+
+func TestRecordPrintRejectsNegativeStockCounts(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	tests := []struct {
+		name  string
+		count func(cmd *app.RecordPrintCmd)
+		field string
+	}{
+		{name: "gifted", count: func(cmd *app.RecordPrintCmd) { cmd.Gifted = "-1" }, field: domain.FieldGifted},
+		{name: "kept", count: func(cmd *app.RecordPrintCmd) { cmd.Kept = "-2" }, field: domain.FieldKept},
+		{name: "scrapped", count: func(cmd *app.RecordPrintCmd) { cmd.Scrapped = "-3" }, field: domain.FieldScrapped},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := printOf(design.ID, spool.ID)
+			cmd.Quantity = "4"
+			tc.count(&cmd)
+
+			_, err := a.RecordPrint(ctx(), cmd)
+			want := unit.ErrMalformedCopies.Error()
+			if got := fieldError(t, err, tc.field); got != want {
+				t.Errorf("%s error = %q, want %q", tc.field, got, want)
+			}
+		})
+	}
+}
+
+func TestRecordPrintKeepsCopiesAboveThe32BitRange(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	const quantity = "3000000000"
+	cmd := printOf(design.ID, spool.ID)
+	cmd.Quantity = quantity
+	cmd.Gifted = "2200000000"
+
+	recorded := recordedPrint(t, a, cmd)
+
+	got := printByID(t, a, recorded.ID)
+	if formatted := unit.FormatCopies(got.Quantity); formatted != quantity {
+		t.Errorf("Quantity = %s, want %s", formatted, quantity)
+	}
+	if got.GiftedCount != 2_200_000_000 {
+		t.Errorf("GiftedCount = %d, want 2200000000", got.GiftedCount)
+	}
+	if got.AvailableCopies != 800_000_000 {
+		t.Errorf("AvailableCopies = %d, want 800000000", got.AvailableCopies)
 	}
 }

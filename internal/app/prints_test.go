@@ -193,7 +193,7 @@ func TestRecordPrintRejectsQuantityBelowOne(t *testing.T) {
 		want     string
 	}{
 		{name: "zero", quantity: "0", want: "must be at least 1"},
-		{name: "negative", quantity: "-1", want: "must be at least 1"},
+		{name: "negative", quantity: "-1", want: unit.ErrMalformedCopies.Error()},
 		{name: "malformed", quantity: "some", want: unit.ErrMalformedCopies.Error()},
 	}
 
