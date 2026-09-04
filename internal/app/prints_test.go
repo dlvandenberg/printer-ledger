@@ -102,15 +102,15 @@ func TestPreviewPrintCostsWithoutRecording(t *testing.T) {
 	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
 	design := addedDesign(t, a, quotedDesign())
 
-	cost, err := a.PreviewPrint(ctx(), printOf(design.ID, spool.ID))
+	preview, err := a.PreviewPrint(ctx(), printOf(design.ID, spool.ID))
 	if err != nil {
 		t.Fatalf("PreviewPrint: %v", err)
 	}
-	if cost.JobCost != 471 {
-		t.Errorf("JobCost = %d, want 471", cost.JobCost)
+	if preview.Cost.JobCost != 471 {
+		t.Errorf("JobCost = %d, want 471", preview.Cost.JobCost)
 	}
-	if cost.CostPerCopy != 235 {
-		t.Errorf("CostPerCopy = %d, want 235", cost.CostPerCopy)
+	if preview.Cost.CostPerCopy != 235 {
+		t.Errorf("CostPerCopy = %d, want 235", preview.Cost.CostPerCopy)
 	}
 
 	prints, err := a.ListPrints(ctx())
@@ -134,12 +134,12 @@ func TestPreviewPrintCostsWhatItCanWhileTheFormIsHalfTyped(t *testing.T) {
 	cmd.Minutes = "5:"
 	cmd.Usages[0].Grams = ""
 
-	cost, err := a.PreviewPrint(ctx(), cmd)
+	preview, err := a.PreviewPrint(ctx(), cmd)
 	if err != nil {
 		t.Fatalf("PreviewPrint: %v", err)
 	}
-	if cost.JobCost != 0 {
-		t.Errorf("JobCost = %d, want 0", cost.JobCost)
+	if preview.Cost.JobCost != 0 {
+		t.Errorf("JobCost = %d, want 0", preview.Cost.JobCost)
 	}
 }
 
@@ -316,5 +316,176 @@ func TestRecordPrintKeepsItsCostWhenTheSpoolPriceIsCorrected(t *testing.T) {
 	}
 	if later.Cost.Filament != 528 {
 		t.Errorf("Filament of the later print = %d, want 528", later.Cost.Filament)
+	}
+}
+
+func TestRecordPrintSumsFilamentAcrossUsageRows(t *testing.T) {
+	a := newApp(t)
+	emptied := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	replacement := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "30.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	view, err := a.RecordPrint(ctx(), printOfRows(design.ID,
+		usage(emptied.ID, "40"), usage(replacement.ID, "80")))
+	if err != nil {
+		t.Fatalf("RecordPrint: %v", err)
+	}
+
+	if len(view.Usages) != 2 {
+		t.Fatalf("returned %d usage rows, want 2", len(view.Usages))
+	}
+	if view.UsedGrams != 120 {
+		t.Errorf("UsedGrams = %d, want 120", view.UsedGrams)
+	}
+	if view.Cost.Filament != 328 {
+		t.Errorf("Filament = %d, want 328", view.Cost.Filament)
+	}
+	if view.Cost.JobCost != 535 {
+		t.Errorf("JobCost = %d, want 535", view.Cost.JobCost)
+	}
+	if got := remainingOf(t, a, emptied.ID); got != 960 {
+		t.Errorf("emptied spool RemainingGrams = %d, want 960", got)
+	}
+	if got := remainingOf(t, a, replacement.ID); got != 920 {
+		t.Errorf("replacement spool RemainingGrams = %d, want 920", got)
+	}
+}
+
+func TestRecordPrintSplitsAcrossTwoSpoolsWhenOneWouldOverdraw(t *testing.T) {
+	a := newApp(t)
+	emptied := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	replacement := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	if _, err := a.ReweighSpool(ctx(), reweigh(emptied.ID, "250")); err != nil {
+		t.Fatalf("ReweighSpool: %v", err)
+	}
+
+	if _, err := a.RecordPrint(ctx(), printOfRows(design.ID,
+		usage(emptied.ID, "40"), usage(replacement.ID, "80"))); err != nil {
+		t.Fatalf("RecordPrint: %v", err)
+	}
+
+	if got := remainingOf(t, a, emptied.ID); got != 0 {
+		t.Errorf("emptied spool RemainingGrams = %d, want 0", got)
+	}
+	if got := remainingOf(t, a, replacement.ID); got != 920 {
+		t.Errorf("replacement spool RemainingGrams = %d, want 920", got)
+	}
+}
+
+func TestRecordPrintValidatesEachRowAgainstItsOwnSpool(t *testing.T) {
+	a := newApp(t)
+	full := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	nearlyEmpty := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	if _, err := a.ReweighSpool(ctx(), reweigh(nearlyEmpty.ID, "250")); err != nil {
+		t.Fatalf("ReweighSpool: %v", err)
+	}
+
+	_, err := a.RecordPrint(ctx(), printOfRows(design.ID,
+		usage(full.ID, "40"), usage(nearlyEmpty.ID, "80")))
+	if got, want := fieldError(t, err, domain.FieldUsageGrams(1)), "only 40g left"; got != want {
+		t.Errorf("second row error = %q, want %q", got, want)
+	}
+	if got := fieldError(t, err, domain.FieldUsageGrams(0)); got != "" {
+		t.Errorf("first row error = %q, want none", got)
+	}
+	if got := remainingOf(t, a, full.ID); got != 1000 {
+		t.Errorf("full spool RemainingGrams = %d, want 1000", got)
+	}
+}
+
+func TestRecordPrintRejectsTwoRowsOverdrawingOneSpool(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	if _, err := a.ReweighSpool(ctx(), reweigh(spool.ID, "310")); err != nil {
+		t.Fatalf("ReweighSpool: %v", err)
+	}
+
+	_, err := a.RecordPrint(ctx(), printOfRows(design.ID,
+		usage(spool.ID, "60"), usage(spool.ID, "60"), usage(spool.ID, "60")))
+	if got, want := fieldError(t, err, domain.FieldUsageGrams(1)), "only 100g left"; got != want {
+		t.Errorf("second row error = %q, want %q", got, want)
+	}
+	if got := fieldError(t, err, domain.FieldUsageGrams(2)); got != "" {
+		t.Errorf("third row error = %q, want the overdraw reported once", got)
+	}
+	if got := remainingOf(t, a, spool.ID); got != 100 {
+		t.Errorf("RemainingGrams = %d, want 100", got)
+	}
+}
+
+func TestRecordPrintRejectsMixedFilamentTypes(t *testing.T) {
+	a := newApp(t)
+	pla := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	petg := addedSpool(t, a, spoolPriced(domain.PETG, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	_, err := a.RecordPrint(ctx(), printOfRows(design.ID,
+		usage(pla.ID, "40"), usage(petg.ID, "80")))
+	if got, want := fieldError(t, err, domain.FieldUsageSpool(1)), "cannot mix PETG with PLA on one print"; got != want {
+		t.Errorf("second row error = %q, want %q", got, want)
+	}
+
+	prints, err := a.ListPrints(ctx())
+	if err != nil {
+		t.Fatalf("ListPrints: %v", err)
+	}
+	if len(prints) != 0 {
+		t.Errorf("ListPrints returned %d prints, want 0", len(prints))
+	}
+}
+
+func TestPreviewPrintFlagsASeededPowerRate(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+
+	seeded, err := a.PreviewPrint(ctx(), printOf(design.ID, spool.ID))
+	if err != nil {
+		t.Fatalf("PreviewPrint: %v", err)
+	}
+	if seeded.FilamentType != domain.PLA {
+		t.Errorf("FilamentType = %q, want PLA", seeded.FilamentType)
+	}
+	if !seeded.RateSeeded {
+		t.Error("RateSeeded is false, want the seeded PLA rate flagged")
+	}
+
+	settings := settingsUpdate()
+	settings.PowerRates[domain.PLA] = "0.11"
+	if _, err := a.UpdateSettings(ctx(), settings); err != nil {
+		t.Fatalf("UpdateSettings: %v", err)
+	}
+
+	measured, err := a.PreviewPrint(ctx(), printOf(design.ID, spool.ID))
+	if err != nil {
+		t.Fatalf("PreviewPrint: %v", err)
+	}
+	if measured.RateSeeded {
+		t.Error("RateSeeded is true, want the edited PLA rate flagged as measured")
+	}
+	if measured.Cost.Energy != 17 {
+		t.Errorf("Energy = %d, want 17", measured.Cost.Energy)
+	}
+}
+
+func TestPreviewPrintReportsNoRateForAnEmptyForm(t *testing.T) {
+	a := newApp(t)
+	design := addedDesign(t, a, quotedDesign())
+
+	preview, err := a.PreviewPrint(ctx(), printOfRows(design.ID, usage(0, "")))
+	if err != nil {
+		t.Fatalf("PreviewPrint: %v", err)
+	}
+	if preview.FilamentType != "" {
+		t.Errorf("FilamentType = %q, want empty", preview.FilamentType)
+	}
+	if preview.RateSeeded {
+		t.Error("RateSeeded is true, want no warning with no spool picked")
 	}
 }

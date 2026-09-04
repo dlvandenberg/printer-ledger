@@ -59,27 +59,47 @@ type form struct {
 func newForm(title string, specs []fieldSpec) *form {
 	fields := make([]field, 0, len(specs))
 	for _, spec := range specs {
-		f := field{spec: spec}
-		if !f.isChoice() {
-			in := textinput.New()
-			in.Placeholder = spec.Placeholder
-			in.SetValue(spec.Prefill)
-			in.CharLimit = fieldCharLimit
-			in.Width = fieldWidth
-			f.input = in
-		} else {
-			for i, choice := range spec.Choices {
-				if choice == spec.Choice {
-					f.choice = i
-				}
-			}
-		}
-		fields = append(fields, f)
+		fields = append(fields, newField(spec))
 	}
 
 	f := &form{title: title, fields: fields}
 	f.applyFocus()
 	return f
+}
+
+func newField(spec fieldSpec) field {
+	f := field{spec: spec}
+	if !f.isChoice() {
+		in := textinput.New()
+		in.Placeholder = spec.Placeholder
+		in.SetValue(spec.Prefill)
+		in.CharLimit = fieldCharLimit
+		in.Width = fieldWidth
+		f.input = in
+		return f
+	}
+	for i, choice := range spec.Choices {
+		if choice == spec.Choice {
+			f.choice = i
+		}
+	}
+	return f
+}
+
+// Append and DropLast let a tab grow and shrink a group of trailing rows — one
+// Filament Usage row per Spool a Print drew from (ADR-0012). The tab owns how
+// many rows there are; the form still owns focus and layout.
+func (f *form) Append(specs ...fieldSpec) {
+	for _, spec := range specs {
+		f.fields = append(f.fields, newField(spec))
+	}
+	f.applyFocus()
+}
+
+func (f *form) DropLast(count int) {
+	f.fields = f.fields[:max(1, len(f.fields)-count)]
+	f.focus = min(f.focus, len(f.fields)-1)
+	f.applyFocus()
 }
 
 func (f *form) applyFocus() {

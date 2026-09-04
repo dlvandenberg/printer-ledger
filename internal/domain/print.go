@@ -64,15 +64,26 @@ func NewPrint(p Print, s Settings, ledgers []SpoolLedger) (Print, error) {
 	if len(p.Usages) == 0 {
 		v.Add(FieldUsageSpool(0), "is required")
 	}
+	// Grams are summed per Spool, not checked per row (ADR-0021), and the
+	// overdraw is reported once, on the row that crosses what is left.
+	printType := p.FilamentType(ledgers)
+	requested := map[int64]unit.Grams{}
+	overdrawn := map[int64]bool{}
 	for row, usage := range p.Usages {
 		ledger, ok := findLedger(ledgers, usage.SpoolID)
 		switch {
 		case !ok:
 			v.Add(FieldUsageSpool(row), "is not a spool on the shelf")
+		case ledger.Spool.FilamentType != printType:
+			v.Add(FieldUsageSpool(row), fmt.Sprintf("cannot mix %s with %s on one print", ledger.Spool.FilamentType, printType))
 		case usage.Grams <= 0:
 			v.Add(FieldUsageGrams(row), "must be more than 0g")
-		case usage.Grams > ledger.Remaining():
-			v.Add(FieldUsageGrams(row), fmt.Sprintf("only %s left", unit.FormatGrams(ledger.Remaining())))
+		default:
+			requested[usage.SpoolID] += usage.Grams
+			if requested[usage.SpoolID] > ledger.Remaining() && !overdrawn[usage.SpoolID] {
+				overdrawn[usage.SpoolID] = true
+				v.Add(FieldUsageGrams(row), fmt.Sprintf("only %s left", unit.FormatGrams(ledger.Remaining())))
+			}
 		}
 	}
 
@@ -95,7 +106,7 @@ func (p Print) WithRates(s Settings, ledgers []SpoolLedger) Print {
 	}
 	p.Usages = usages
 	p.KwhPrice = s.KwhPrice
-	p.KwhPerHour = s.PowerRate(p.filamentType(ledgers)).KwhPerHour
+	p.KwhPerHour = s.PowerRate(p.FilamentType(ledgers)).KwhPerHour
 	p.MachineRate = s.MachineHourlyRate
 	return p
 }
@@ -137,10 +148,10 @@ func (p Print) filamentCost() unit.Cents {
 	return unit.Cents(roundDiv(hundredths, unit.GramPriceScale))
 }
 
-// filamentType is the type the energy rate is looked up by. All usage rows are
+// FilamentType is the type the energy rate is looked up by. All usage rows are
 // Spools of one Filament Type (ADR-0012), so the first row that names a spool
-// on the shelf decides.
-func (p Print) filamentType(ledgers []SpoolLedger) FilamentType {
+// on the shelf decides, and every later row is validated against it.
+func (p Print) FilamentType(ledgers []SpoolLedger) FilamentType {
 	for _, usage := range p.Usages {
 		if ledger, ok := findLedger(ledgers, usage.SpoolID); ok {
 			return ledger.Spool.FilamentType

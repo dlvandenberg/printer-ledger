@@ -28,16 +28,17 @@ var (
 var _ tabModel = printsModel{}
 
 type printsModel struct {
-	app     *app.App
-	rows    []app.PrintView
-	cursor  int
-	form    *form
-	designs []app.DesignView
-	spools  []app.SpoolView
-	cost    app.PrintCostView
-	drafted string
-	priced  string
-	loadErr error
+	app       *app.App
+	rows      []app.PrintView
+	cursor    int
+	form      *form
+	designs   []app.DesignView
+	spools    []app.SpoolView
+	preview   app.PrintPreviewView
+	usageRows int
+	drafted   string
+	priced    string
+	loadErr   error
 }
 
 func newPrintsModel(a *app.App) (printsModel, error) {
@@ -62,7 +63,7 @@ func (m *printsModel) reload() error {
 
 func (m printsModel) Help() string {
 	if m.form != nil {
-		return m.form.Help()
+		return fmt.Sprintf("%s · %s add spool row · %s remove spool row", m.form.Help(), KeyCtrlN, KeyCtrlX)
 	}
 	return fmt.Sprintf("%s record · %s/%s move · %s", KeyA, KeyDown, KeyUp, globalHelp)
 }
@@ -116,6 +117,7 @@ func (m *printsModel) openForm() error {
 	m.designs = designs
 	m.spools = spools
 	m.form = newPrintForm(designs, spools, draft)
+	m.usageRows = 1
 	m.drafted, m.priced = "", ""
 	m.reprice()
 	return nil
@@ -141,6 +143,12 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 			m.loadErr = err
 		}
 		return m, nil
+	case KeyCtrlN:
+		m.addUsageRow()
+		return m, nil
+	case KeyCtrlX:
+		m.removeUsageRow()
+		return m, nil
 	}
 
 	cmd := m.form.Update(msg)
@@ -150,8 +158,29 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 }
 
 func (m printsModel) submitForm() error {
-	_, err := m.app.RecordPrint(context.Background(), recordPrintCmd(m.form, m.designs, m.spools))
+	_, err := m.app.RecordPrint(context.Background(), recordPrintCmd(m.form, m.designs, m.spools, m.usageRows))
 	return err
+}
+
+// addUsageRow and removeUsageRow record a mid-print spool swap as one Print
+// (ADR-0012). A row change drops the errors, which are keyed by row. The new
+// row opens on the Spool above it, so an untouched row cannot mix types.
+func (m *printsModel) addUsageRow() {
+	above := m.form.Value(domain.FieldUsageSpool(m.usageRows - 1))
+	m.form.Append(usageRowSpecs(m.usageRows, m.spools, "", above)...)
+	m.usageRows++
+	m.form.SetErrors(nil)
+	m.reprice()
+}
+
+func (m *printsModel) removeUsageRow() {
+	if m.usageRows < 2 {
+		return
+	}
+	m.usageRows--
+	m.form.DropLast(usageFieldsPerRow)
+	m.form.SetErrors(nil)
+	m.reprice()
 }
 
 // applyDraft re-prefills the estimates when the design or the quantity moves.
@@ -174,19 +203,19 @@ func (m *printsModel) applyDraft() {
 }
 
 func (m *printsModel) reprice() {
-	cmd := recordPrintCmd(m.form, m.designs, m.spools)
+	cmd := recordPrintCmd(m.form, m.designs, m.spools, m.usageRows)
 	key := costInputs(cmd)
 	if key == m.priced {
 		return
 	}
 	m.priced = key
 
-	cost, err := m.app.PreviewPrint(context.Background(), cmd)
+	preview, err := m.app.PreviewPrint(context.Background(), cmd)
 	if err != nil {
 		m.loadErr = err
 		return
 	}
-	m.cost = cost
+	m.preview = preview
 }
 
 // costInputs names every field the breakdown reads, so a key that moves none of
@@ -201,7 +230,7 @@ func costInputs(cmd app.RecordPrintCmd) string {
 
 func (m printsModel) View() string {
 	if m.form != nil {
-		return m.failure() + m.form.View() + "\n" + costBreakdown(m.cost)
+		return m.failure() + m.form.View() + "\n" + costBreakdown(m.preview)
 	}
 
 	var b strings.Builder
@@ -234,8 +263,10 @@ func (m printsModel) View() string {
 }
 
 // costBreakdown shows what the job cost and what one copy cost. A Print never
-// shows a suggested price: the price was decided on the Design.
-func costBreakdown(cost app.PrintCostView) string {
+// shows a suggested price: the price was decided on the Design. An unmeasured
+// power rate warns and never blocks: the figure is a placeholder, not an error.
+func costBreakdown(preview app.PrintPreviewView) string {
+	cost := preview.Cost
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("Cost"))
 	b.WriteString("\n")
@@ -244,6 +275,12 @@ func costBreakdown(cost app.PrintCostView) string {
 	fmt.Fprintf(&b, printCostLine, "overhead", costAmount(cost.Overhead, plainStyle))
 	fmt.Fprintf(&b, printCostLine, "job cost", costAmount(cost.JobCost, titleStyle))
 	fmt.Fprintf(&b, printCostLine, "per copy", costAmount(cost.CostPerCopy, titleStyle))
+	if preview.RateSeeded {
+		b.WriteString("\n")
+		b.WriteString(warningStyle.Render(fmt.Sprintf(
+			"energy uses the %s rate the ledger seeded, not a measured one", preview.FilamentType)))
+		b.WriteString("\n")
+	}
 	return b.String()
 }
 

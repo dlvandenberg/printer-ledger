@@ -234,3 +234,13 @@ func remainingOf(t *testing.T, a *app.App, spoolID int64) unit.Grams {
 	}
 	return detail.Spool.RemainingGrams
 }
+
+func printOfRows(designID int64, rows ...app.FilamentUsageCmd) app.RecordPrintCmd {
+	cmd := printOf(designID, 0)
+	cmd.Usages = rows
+	return cmd
+}
+
+func usage(spoolID int64, grams string) app.FilamentUsageCmd {
+	return app.FilamentUsageCmd{SpoolID: spoolID, Grams: grams}
+}

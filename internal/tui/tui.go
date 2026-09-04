@@ -20,6 +20,7 @@ var (
 	plainStyle       = lipgloss.NewStyle()
 	helpStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 	errorStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	warningStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 	placeholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).PaddingTop(1)
 )
 

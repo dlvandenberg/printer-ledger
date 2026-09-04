@@ -237,8 +237,10 @@ spool's purchase price affects later prints only. It is held in hundredths of a 
 hundredths across the rows and rounds once at the end.
 
 Multiple rows exist so a mid-print spool swap is one Print, not two: 40g from the spool that ran
-out plus 80g from its replacement. Each row is validated against that Spool's `remaining`, which
-is what keeps the `remaining >= 0` invariant true and forces swaps to be recorded explicitly.
+out plus 80g from its replacement. Grams are summed per **Spool** across the rows and each sum is
+validated against that Spool's `remaining` (ADR-0021), which is what keeps the `remaining >= 0`
+invariant true and forces swaps to be recorded explicitly. One Spool may appear on more than one
+row — a swap back to it is a real job — so the check cannot be per row.
 
 All rows on one Print must be Spools of the same **Filament Type**.
 

@@ -14,12 +14,31 @@ the form warns that the energy figure is a placeholder. It warns, it does not bl
 
 **Blocked by:** 06
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] A Print accepts two or more filament usage rows, and filament cost sums across them
-- [ ] Rows can be added and removed on the form; it opens with one row
-- [ ] The spool picker shows each spool's remaining grams
-- [ ] A total that overdraws one spool but splits correctly across two is accepted
-- [ ] Two spools of different Filament Types on one Print is rejected with a clear inline error
-- [ ] Each row is validated against its own spool's remaining
-- [ ] A warning shows when the Print's Filament Type has a seeded rather than measured power rate, without blocking submission
+- [x] A Print accepts two or more filament usage rows, and filament cost sums across them
+- [x] Rows can be added and removed on the form; it opens with one row
+- [x] The spool picker shows each spool's remaining grams
+- [x] A total that overdraws one spool but splits correctly across two is accepted
+- [x] Two spools of different Filament Types on one Print is rejected with a clear inline error
+- [x] Each row is validated against its own spool's remaining
+- [x] A warning shows when the Print's Filament Type has a seeded rather than measured power rate, without blocking submission
+
+## Comments
+
+Implemented. Overdraw is checked **per Spool, not per row** — grams are summed by `spoolID` before
+the comparison, so two rows naming one Spool cannot each pass and together take it negative. That
+contradicted ADR-0012's wording and CONTEXT.md, so it is recorded as ADR-0021 and the glossary
+entry is sharpened. The shortfall is reported once per Spool, on the row that crosses it.
+
+The one-type rule reuses `Print.FilamentType(ledgers)`, now exported: the first row naming a Spool
+on the shelf sets the Print's type and every later row is validated against it, so the type the
+energy rate is looked up by and the type the rule enforces cannot disagree.
+
+`PreviewPrint` returns `PrintPreviewView{Cost, FilamentType, RateMeasured}` rather than a bare
+`PrintCostView`. The seeded-rate warning needs a flag from a use case; `measured`/`default` stay
+TUI labels.
+
+Rows are added with `ctrl+n` and removed with `ctrl+x`, intercepted by the tab before the form sees
+the key, since a printable key would land in the focused input. `form.Append`/`form.Truncate` grow
+and shrink a group of trailing rows; the tab owns the row count, the form still owns focus.

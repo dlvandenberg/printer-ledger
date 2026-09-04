@@ -23,4 +23,6 @@ const (
 	KeyShiftTab = "shift+tab"
 	// Ctrl modifier
 	KeyCtrlC = "ctrl+c"
+	KeyCtrlN = "ctrl+n"
+	KeyCtrlX = "ctrl+x"
 )

@@ -53,6 +53,15 @@ type FilamentUsageView struct {
 	CostPerGram  unit.CentsPerGram
 }
 
+// PrintPreviewView costs a Print still being typed. RateSeeded says the form
+// should warn: the energy figure came from a seeded rate rather than a
+// smart-plug reading. It never blocks recording.
+type PrintPreviewView struct {
+	Cost         PrintCostView
+	FilamentType domain.FilamentType
+	RateSeeded   bool
+}
+
 // PrintDraftView is what the Print form opens on: the Design's per-copy
 // estimates multiplied by the quantity, so a normal plate needs no typing.
 type PrintDraftView struct {
@@ -148,18 +157,23 @@ func (a *App) PrintDraft(ctx context.Context, designID int64, quantity string) (
 // PreviewPrint costs a Print that has not been recorded, so the breakdown moves
 // with the form. A field the operator has not finished typing costs nothing
 // rather than failing, which is what keeps the breakdown on screen.
-func (a *App) PreviewPrint(ctx context.Context, cmd RecordPrintCmd) (PrintCostView, error) {
+func (a *App) PreviewPrint(ctx context.Context, cmd RecordPrintCmd) (PrintPreviewView, error) {
 	settings, err := a.db.Settings(ctx)
 	if err != nil {
-		return PrintCostView{}, err
+		return PrintPreviewView{}, err
 	}
 	ledgers, err := a.db.SpoolLedgers(ctx)
 	if err != nil {
-		return PrintCostView{}, err
+		return PrintPreviewView{}, err
 	}
 
 	drafted := draftPrint(cmd, &domain.ValidationError{}).WithRates(settings, ledgers)
-	return toPrintCostView(drafted), nil
+	filamentType := drafted.FilamentType(ledgers)
+	return PrintPreviewView{
+		Cost:         toPrintCostView(drafted),
+		FilamentType: filamentType,
+		RateSeeded:   filamentType != "" && !settings.PowerRate(filamentType).Measured,
+	}, nil
 }
 
 func parseRecordPrint(cmd RecordPrintCmd, s domain.Settings, ledgers []domain.SpoolLedger) (domain.Print, error) {
