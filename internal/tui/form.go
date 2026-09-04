@@ -194,13 +194,20 @@ func (f *form) SetErrors(errs *domain.ValidationError) { f.errs = errs }
 
 func (f *form) Help() string {
 	keys := []string{fmt.Sprintf("%s/%s next/prev field", KeyTab, KeyShiftTab)}
-	for _, fld := range f.fields {
-		if fld.isChoice() {
-			keys = append(keys, fmt.Sprintf("%s/%s (or %s/%s) %s", KeyLeft, KeyRight, KeyH, KeyL, strings.ToLower(fld.spec.Label)))
-		}
+	if f.hasChoiceField() {
+		keys = append(keys, fmt.Sprintf("%s/%s (or %s/%s) change choice", KeyLeft, KeyRight, KeyH, KeyL))
 	}
 	keys = append(keys, fmt.Sprintf("%s save · %s cancel · %s quit", KeyEnter, KeyEsc, KeyCtrlC))
 	return strings.Join(keys, " · ")
+}
+
+func (f *form) hasChoiceField() bool {
+	for _, fld := range f.fields {
+		if fld.isChoice() {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *form) View() string {
