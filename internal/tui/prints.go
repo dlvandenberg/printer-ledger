@@ -296,3 +296,10 @@ func (m printsModel) failure() string {
 	}
 	return errorStyle.Render(m.loadErr.Error()) + "\n\n"
 }
+
+func (m printsModel) Refresh() tabModel {
+	if err := m.reload(); err != nil {
+		m.loadErr = err
+	}
+	return m
+}

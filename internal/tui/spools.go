@@ -183,3 +183,13 @@ func (m spoolsModel) Help() string {
 	}
 	return fmt.Sprintf("%s add · %s detail · %s/%s move · %s", KeyA, KeyEnter, KeyUp, KeyDown, globalHelp)
 }
+
+func (m spoolsModel) Refresh() tabModel {
+	if err := m.reload(); err != nil {
+		m.loadErr = err
+	}
+	if m.detail != nil {
+		m.openDetail(m.detail.Spool.ID)
+	}
+	return m
+}

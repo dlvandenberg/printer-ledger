@@ -9,6 +9,10 @@ import (
 // a key returns itself.
 type tabModel interface {
 	Update(msg tea.KeyMsg) (tabModel, tea.Cmd)
+	// Refresh re-reads what the tab shows. The shell calls it when the tab
+	// becomes active, because a use case run on one tab can change what
+	// another tab is already displaying.
+	Refresh() tabModel
 	View() string
 	Help() string
 	// CapturesInput true means the tab receives every key except the shell's quit.
@@ -31,6 +35,8 @@ func newPlaceholder(name string) namedTab {
 }
 
 func (t placeholderTab) Update(tea.KeyMsg) (tabModel, tea.Cmd) { return t, nil }
+
+func (t placeholderTab) Refresh() tabModel { return t }
 
 func (t placeholderTab) View() string {
 	return titleStyle.Render(t.title) + "\n" + placeholderStyle.Render("Nothing here yet.")

@@ -79,11 +79,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case KeyQ:
 				return m, tea.Quit
 			case KeyTab:
-				m.active = wrap(m.active, 1, len(m.tabs))
-				return m, nil
+				return m.switchTab(1), nil
 			case KeyShiftTab:
-				m.active = wrap(m.active, -1, len(m.tabs))
-				return m, nil
+				return m.switchTab(-1), nil
 			}
 		}
 
@@ -98,6 +96,14 @@ func (m Model) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	updated, cmd := m.current().Update(msg)
 	m.tabs[m.active].model = updated
 	return m, cmd
+}
+
+// The refreshed tab is written into the shared backing array, for the same
+// reason routeKey writes its updated tab there.
+func (m Model) switchTab(delta int) Model {
+	m.active = wrap(m.active, delta, len(m.tabs))
+	m.tabs[m.active].model = m.current().Refresh()
+	return m
 }
 
 func (m Model) current() tabModel { return m.tabs[m.active].model }

@@ -203,3 +203,10 @@ func (m designsModel) failure() string {
 	}
 	return errorStyle.Render(m.loadErr.Error()) + "\n\n"
 }
+
+func (m designsModel) Refresh() tabModel {
+	if err := m.reload(); err != nil {
+		m.loadErr = err
+	}
+	return m
+}

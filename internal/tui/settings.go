@@ -122,3 +122,10 @@ func (m settingsModel) Help() string {
 	}
 	return fmt.Sprintf("%s edit · %s", KeyE, globalHelp)
 }
+
+func (m settingsModel) Refresh() tabModel {
+	if err := m.reload(); err != nil {
+		m.lastErr = err
+	}
+	return m
+}
