@@ -173,6 +173,41 @@ func TestDesignQuoteExcludesSpoolTooSmallForTheJob(t *testing.T) {
 	}
 }
 
+func TestDesignQuoteKeepsASpoolHoldingExactlyTheJob(t *testing.T) {
+	a := newApp(t)
+
+	if _, err := a.AddSpool(ctx(), spoolPriced(domain.PLA, "1000", "22.00")); err != nil {
+		t.Fatalf("AddSpool: %v", err)
+	}
+	expensive, err := a.AddSpool(ctx(), spoolPriced(domain.PLA, "1000", "30.00"))
+	if err != nil {
+		t.Fatalf("AddSpool: %v", err)
+	}
+	if _, err := a.ReweighSpool(ctx(), reweigh(expensive.ID, "270")); err != nil {
+		t.Fatalf("ReweighSpool: %v", err)
+	}
+	design, err := a.AddDesign(ctx(), quotedDesign())
+	if err != nil {
+		t.Fatalf("AddDesign: %v", err)
+	}
+
+	quote, err := a.DesignQuote(ctx(), design.ID)
+	if err != nil {
+		t.Fatalf("DesignQuote: %v", err)
+	}
+
+	row := quoteRow(t, quote, domain.PLA)
+	if row.SpoolID != expensive.ID {
+		t.Errorf("SpoolID = %d, want the spool holding exactly the job %d", row.SpoolID, expensive.ID)
+	}
+	if row.Filament != 180 {
+		t.Errorf("Filament = %d, want 180", row.Filament)
+	}
+	if row.Reference {
+		t.Error("expected a live price, not a reference price")
+	}
+}
+
 func TestDesignQuoteFallsBackToReferencePriceWithNoCapableSpool(t *testing.T) {
 	a := newApp(t)
 

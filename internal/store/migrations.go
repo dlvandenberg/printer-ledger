@@ -19,8 +19,8 @@ CREATE TABLE spools (
     filament_type       TEXT    NOT NULL,
     brand               TEXT    NOT NULL,
     color               TEXT    NOT NULL,
-    initial_grams       INTEGER NOT NULL,
-    tare_grams          INTEGER NOT NULL,
+    initial_centigrams  INTEGER NOT NULL,
+    tare_centigrams     INTEGER NOT NULL,
     purchase_cost_cents INTEGER NOT NULL,
     purchase_date       TEXT    NOT NULL
 );`,
@@ -49,8 +49,8 @@ CREATE TABLE power_rates (
 CREATE TABLE spool_adjustments (
     id                      INTEGER PRIMARY KEY AUTOINCREMENT,
     spool_id                INTEGER NOT NULL REFERENCES spools(id),
-    measured_grams          INTEGER NOT NULL,
-    delta_grams             INTEGER NOT NULL,
+    measured_centigrams     INTEGER NOT NULL,
+    delta_centigrams        INTEGER NOT NULL,
     adjusted_on             TEXT    NOT NULL,
     note                    TEXT    NOT NULL
 );`,
@@ -62,7 +62,7 @@ CREATE TABLE designs (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
     name                  TEXT NOT NULL,
     default_filament_type TEXT NOT NULL,
-    estimated_grams       INTEGER NOT NULL,
+    estimated_centigrams  INTEGER NOT NULL,
     estimated_minutes     INTEGER NOT NULL,
     margin_hundredths     INTEGER NOT NULL
 );`,
@@ -85,7 +85,7 @@ CREATE TABLE filament_usages (
     id                       INTEGER PRIMARY KEY AUTOINCREMENT,
     print_id                 INTEGER NOT NULL REFERENCES prints(id) ON DELETE CASCADE,
     spool_id                 INTEGER NOT NULL REFERENCES spools(id),
-    grams                    INTEGER NOT NULL,
+    centigrams               INTEGER NOT NULL,
     cost_per_gram_hundredths INTEGER NOT NULL
 );
 

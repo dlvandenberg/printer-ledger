@@ -108,12 +108,14 @@ func (s Spool) QuotedValueOf(g unit.Grams) unit.Cents {
 }
 
 // GramPrice is what one gram of this spool's filament cost, at the precision a
-// Print freezes it: a €22.00 spool of 1000g is 2.2c/g.
+// Print freezes it: a €22.00 spool of 1000g is 2.2c/g. The numerator carries
+// the gram scale because the price is per whole gram, not per centigram.
 func (s Spool) GramPrice() unit.CentsPerGram {
 	if s.InitialGrams <= 0 {
 		return 0
 	}
-	return unit.CentsPerGram(roundDiv(int64(s.PurchaseCost)*unit.GramPriceScale, int64(s.InitialGrams)))
+	numerator := int64(s.PurchaseCost) * unit.GramPriceScale * unit.GramScale
+	return unit.CentsPerGram(roundDiv(numerator, int64(s.InitialGrams)))
 }
 
 // PricierPerGramThan compares the two ratios by cross-multiplying, so the

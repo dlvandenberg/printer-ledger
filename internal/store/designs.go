@@ -10,7 +10,7 @@ import (
 )
 
 const designQuery = `
-SELECT d.id, d.name, d.default_filament_type, d.estimated_grams, d.estimated_minutes,
+SELECT d.id, d.name, d.default_filament_type, d.estimated_centigrams, d.estimated_minutes,
        d.margin_hundredths
 FROM designs d`
 
@@ -18,7 +18,7 @@ var _ domain.DesignRepository = &Store{}
 
 func (s *Store) CreateDesign(ctx context.Context, d domain.Design) (domain.Design, error) {
 	res, err := s.q().ExecContext(ctx, `
-INSERT INTO designs (name, default_filament_type, estimated_grams, estimated_minutes,
+INSERT INTO designs (name, default_filament_type, estimated_centigrams, estimated_minutes,
                      margin_hundredths)
 VALUES (?, ?, ?, ?, ?)`,
 		d.Name, string(d.DefaultFilamentType), int64(d.EstimatedGrams),
@@ -39,7 +39,7 @@ func (s *Store) UpdateDesign(ctx context.Context, d domain.Design) (domain.Desig
 UPDATE designs
    SET name                  = ?,
        default_filament_type = ?,
-       estimated_grams       = ?,
+       estimated_centigrams  = ?,
        estimated_minutes     = ?,
        margin_hundredths     = ?
  WHERE id = ?`,

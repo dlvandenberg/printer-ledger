@@ -70,8 +70,8 @@ func TestRecordPrintThenList(t *testing.T) {
 	if len(got.Usages) != 1 {
 		t.Fatalf("returned %d usage rows, want 1", len(got.Usages))
 	}
-	if got.Usages[0].Grams != 120 {
-		t.Errorf("Grams = %d, want 120", got.Usages[0].Grams)
+	if got.Usages[0].Grams != grams(120) {
+		t.Errorf("Grams = %d, want %d", got.Usages[0].Grams, grams(120))
 	}
 	if got.Usages[0].CostPerGram != 220 {
 		t.Errorf("CostPerGram = %d, want 220", got.Usages[0].CostPerGram)
@@ -86,8 +86,8 @@ func TestPrintDraftPrefillsEstimatesTimesQuantity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PrintDraft: %v", err)
 	}
-	if draft.Grams != 120 {
-		t.Errorf("Grams = %d, want 120", draft.Grams)
+	if draft.Grams != grams(120) {
+		t.Errorf("Grams = %d, want %d", draft.Grams, grams(120))
 	}
 	if draft.Minutes != 330 {
 		t.Errorf("Minutes = %d, want 330", draft.Minutes)
@@ -120,8 +120,8 @@ func TestPreviewPrintCostsWithoutRecording(t *testing.T) {
 	if len(prints) != 0 {
 		t.Errorf("ListPrints returned %d prints, want 0", len(prints))
 	}
-	if remaining := remainingOf(t, a, spool.ID); remaining != 1000 {
-		t.Errorf("RemainingGrams = %d, want 1000", remaining)
+	if remaining := remainingOf(t, a, spool.ID); remaining != grams(1000) {
+		t.Errorf("RemainingGrams = %d, want %d", remaining, grams(1000))
 	}
 }
 
@@ -156,11 +156,11 @@ func TestRecordPrintDropsSpoolRemaining(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SpoolDetail: %v", err)
 	}
-	if detail.Spool.UsedGrams != 120 {
-		t.Errorf("UsedGrams = %d, want 120", detail.Spool.UsedGrams)
+	if detail.Spool.UsedGrams != grams(120) {
+		t.Errorf("UsedGrams = %d, want %d", detail.Spool.UsedGrams, grams(120))
 	}
-	if detail.Spool.RemainingGrams != 880 {
-		t.Errorf("RemainingGrams = %d, want 880", detail.Spool.RemainingGrams)
+	if detail.Spool.RemainingGrams != grams(880) {
+		t.Errorf("RemainingGrams = %d, want %d", detail.Spool.RemainingGrams, grams(880))
 	}
 }
 
@@ -177,8 +177,8 @@ func TestRecordPrintRejectsOverdrawNamingWhatIsLeft(t *testing.T) {
 	if got, want := fieldError(t, err, domain.FieldUsageGrams(0)), "only 40g left"; got != want {
 		t.Errorf("usage grams error = %q, want %q", got, want)
 	}
-	if remaining := remainingOf(t, a, spool.ID); remaining != 40 {
-		t.Errorf("RemainingGrams = %d, want 40", remaining)
+	if remaining := remainingOf(t, a, spool.ID); remaining != grams(40) {
+		t.Errorf("RemainingGrams = %d, want %d", remaining, grams(40))
 	}
 }
 
@@ -282,8 +282,8 @@ func TestEditSpoolRejectsAnInitialWeightBelowWhatPrintsTookOff(t *testing.T) {
 		t.Fatalf("SpoolDetail: %v", err)
 	}
 	after := detail.Spool
-	if after.InitialGrams != 1000 {
-		t.Errorf("InitialGrams after the rejected edit = %d, want 1000", after.InitialGrams)
+	if after.InitialGrams != grams(1000) {
+		t.Errorf("InitialGrams after the rejected edit = %d, want %d", after.InitialGrams, grams(1000))
 	}
 	if after.RemainingGrams < 0 {
 		t.Errorf("RemainingGrams = %d, want no negative remaining", after.RemainingGrams)
@@ -334,8 +334,8 @@ func TestRecordPrintSumsFilamentAcrossUsageRows(t *testing.T) {
 	if len(view.Usages) != 2 {
 		t.Fatalf("returned %d usage rows, want 2", len(view.Usages))
 	}
-	if view.UsedGrams != 120 {
-		t.Errorf("UsedGrams = %d, want 120", view.UsedGrams)
+	if view.UsedGrams != grams(120) {
+		t.Errorf("UsedGrams = %d, want %d", view.UsedGrams, grams(120))
 	}
 	if view.Cost.Filament != 328 {
 		t.Errorf("Filament = %d, want 328", view.Cost.Filament)
@@ -343,11 +343,11 @@ func TestRecordPrintSumsFilamentAcrossUsageRows(t *testing.T) {
 	if view.Cost.JobCost != 535 {
 		t.Errorf("JobCost = %d, want 535", view.Cost.JobCost)
 	}
-	if got := remainingOf(t, a, emptied.ID); got != 960 {
-		t.Errorf("emptied spool RemainingGrams = %d, want 960", got)
+	if got := remainingOf(t, a, emptied.ID); got != grams(960) {
+		t.Errorf("emptied spool RemainingGrams = %d, want %d", got, grams(960))
 	}
-	if got := remainingOf(t, a, replacement.ID); got != 920 {
-		t.Errorf("replacement spool RemainingGrams = %d, want 920", got)
+	if got := remainingOf(t, a, replacement.ID); got != grams(920) {
+		t.Errorf("replacement spool RemainingGrams = %d, want %d", got, grams(920))
 	}
 }
 
@@ -369,8 +369,8 @@ func TestRecordPrintSplitsAcrossTwoSpoolsWhenOneWouldOverdraw(t *testing.T) {
 	if got := remainingOf(t, a, emptied.ID); got != 0 {
 		t.Errorf("emptied spool RemainingGrams = %d, want 0", got)
 	}
-	if got := remainingOf(t, a, replacement.ID); got != 920 {
-		t.Errorf("replacement spool RemainingGrams = %d, want 920", got)
+	if got := remainingOf(t, a, replacement.ID); got != grams(920) {
+		t.Errorf("replacement spool RemainingGrams = %d, want %d", got, grams(920))
 	}
 }
 
@@ -392,8 +392,8 @@ func TestRecordPrintValidatesEachRowAgainstItsOwnSpool(t *testing.T) {
 	if got := fieldError(t, err, domain.FieldUsageGrams(0)); got != "" {
 		t.Errorf("first row error = %q, want none", got)
 	}
-	if got := remainingOf(t, a, full.ID); got != 1000 {
-		t.Errorf("full spool RemainingGrams = %d, want 1000", got)
+	if got := remainingOf(t, a, full.ID); got != grams(1000) {
+		t.Errorf("full spool RemainingGrams = %d, want %d", got, grams(1000))
 	}
 }
 
@@ -414,8 +414,8 @@ func TestRecordPrintRejectsTwoRowsOverdrawingOneSpool(t *testing.T) {
 	if got := fieldError(t, err, domain.FieldUsageGrams(2)); got != "" {
 		t.Errorf("third row error = %q, want the overdraw reported once", got)
 	}
-	if got := remainingOf(t, a, spool.ID); got != 100 {
-		t.Errorf("RemainingGrams = %d, want 100", got)
+	if got := remainingOf(t, a, spool.ID); got != grams(100) {
+		t.Errorf("RemainingGrams = %d, want %d", got, grams(100))
 	}
 }
 

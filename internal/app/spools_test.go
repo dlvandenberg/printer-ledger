@@ -39,17 +39,47 @@ func TestAddSpoolThenList(t *testing.T) {
 	if got.Brand != "Bambu" || got.Color != "Black" {
 		t.Errorf("Brand/Color = %q/%q, want Bambu/Black", got.Brand, got.Color)
 	}
-	if got.InitialGrams != 1000 {
-		t.Errorf("InitialGrams = %d, want 1000", got.InitialGrams)
+	if got.InitialGrams != grams(1000) {
+		t.Errorf("InitialGrams = %d, want %d", got.InitialGrams, grams(1000))
 	}
-	if got.TareGrams != 210 {
-		t.Errorf("TareGrams = %d, want 210", got.TareGrams)
+	if got.TareGrams != grams(210) {
+		t.Errorf("TareGrams = %d, want %d", got.TareGrams, grams(210))
 	}
 	if got.PurchaseCost != 2200 {
 		t.Errorf("PurchaseCost = %d, want 2200", got.PurchaseCost)
 	}
 	if !got.PurchaseDate.Equal(date(t, "2026-08-01")) {
 		t.Errorf("PurchaseDate = %s, want 2026-08-01", unit.FormatDate(got.PurchaseDate))
+	}
+}
+
+func TestSpoolWeightsRoundTripAsTypedText(t *testing.T) {
+	a := newApp(t)
+
+	cmd := plaSpool()
+	cmd.InitialGrams, cmd.TareGrams = "1000", "210"
+
+	if _, err := a.AddSpool(ctx(), cmd); err != nil {
+		t.Fatalf("AddSpool: %v", err)
+	}
+
+	spools, err := a.ListSpools(ctx())
+	if err != nil {
+		t.Fatalf("ListSpools: %v", err)
+	}
+	if len(spools) != 1 {
+		t.Fatalf("got %d spools, want 1", len(spools))
+	}
+
+	got := spools[0]
+	if display := unit.FormatGrams(got.InitialGrams); display != "1000g" {
+		t.Errorf("InitialGrams displays as %q, want \"1000g\"", display)
+	}
+	if display := unit.FormatGrams(got.TareGrams); display != "210g" {
+		t.Errorf("TareGrams displays as %q, want \"210g\"", display)
+	}
+	if display := unit.FormatGrams(got.RemainingGrams); display != "1000g" {
+		t.Errorf("RemainingGrams displays as %q, want \"1000g\"", display)
 	}
 }
 
@@ -93,8 +123,8 @@ func TestSpoolRemainingWithNoEvents(t *testing.T) {
 	}
 
 	got := spools[0]
-	if got.RemainingGrams != 1000 {
-		t.Errorf("RemainingGrams = %d, want 1000", got.RemainingGrams)
+	if got.RemainingGrams != grams(1000) {
+		t.Errorf("RemainingGrams = %d, want %d", got.RemainingGrams, grams(1000))
 	}
 	if got.RemainingValue != 2200 {
 		t.Errorf("RemainingValue = %d, want 2200", got.RemainingValue)
@@ -195,8 +225,8 @@ func TestAddSpoolAcceptsFreeSpool(t *testing.T) {
 	if added.RemainingValue != 0 {
 		t.Errorf("RemainingValue = %d, want 0", added.RemainingValue)
 	}
-	if added.RemainingGrams != 1000 {
-		t.Errorf("RemainingGrams = %d, want 1000", added.RemainingGrams)
+	if added.RemainingGrams != grams(1000) {
+		t.Errorf("RemainingGrams = %d, want %d", added.RemainingGrams, grams(1000))
 	}
 }
 
@@ -316,22 +346,22 @@ func TestReweighSpoolDerivesRemainingFromTare(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReweighSpool: %v", err)
 	}
-	if detail.Spool.RemainingGrams != 400 {
-		t.Errorf("RemainingGrams = %d, want 400", detail.Spool.RemainingGrams)
+	if detail.Spool.RemainingGrams != grams(400) {
+		t.Errorf("RemainingGrams = %d, want %d", detail.Spool.RemainingGrams, grams(400))
 	}
 	if len(detail.Adjustments) != 1 {
 		t.Fatalf("got %d adjustments, want 1", len(detail.Adjustments))
 	}
 
 	got := detail.Adjustments[0]
-	if got.MeasuredGrams != 610 {
-		t.Errorf("MeasuredGrams = %d, want 610", got.MeasuredGrams)
+	if got.MeasuredGrams != grams(610) {
+		t.Errorf("MeasuredGrams = %d, want %d", got.MeasuredGrams, grams(610))
 	}
-	if got.DerivedRemaining != 400 {
-		t.Errorf("DerivedRemaining = %d, want 400", got.DerivedRemaining)
+	if got.DerivedRemaining != grams(400) {
+		t.Errorf("DerivedRemaining = %d, want %d", got.DerivedRemaining, grams(400))
 	}
-	if got.DeltaGrams != -600 {
-		t.Errorf("DeltaGrams = %d, want -600", got.DeltaGrams)
+	if got.DeltaGrams != grams(-600) {
+		t.Errorf("DeltaGrams = %d, want %d", got.DeltaGrams, grams(-600))
 	}
 	if !got.AdjustedOn.Equal(date(t, "2026-08-20")) {
 		t.Errorf("AdjustedOn = %s, want 2026-08-20", unit.FormatDate(got.AdjustedOn))
@@ -356,17 +386,17 @@ func TestSpoolDetailExplainsItsRemaining(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SpoolDetail: %v", err)
 	}
-	if detail.Spool.InitialGrams != 1000 {
-		t.Errorf("InitialGrams = %d, want 1000", detail.Spool.InitialGrams)
+	if detail.Spool.InitialGrams != grams(1000) {
+		t.Errorf("InitialGrams = %d, want %d", detail.Spool.InitialGrams, grams(1000))
 	}
 	if detail.Spool.UsedGrams != 0 {
 		t.Errorf("UsedGrams = %d, want 0", detail.Spool.UsedGrams)
 	}
-	if detail.Spool.AdjustedGrams != -600 {
-		t.Errorf("AdjustedGrams = %d, want -600", detail.Spool.AdjustedGrams)
+	if detail.Spool.AdjustedGrams != grams(-600) {
+		t.Errorf("AdjustedGrams = %d, want %d", detail.Spool.AdjustedGrams, grams(-600))
 	}
-	if detail.Spool.RemainingGrams != 400 {
-		t.Errorf("RemainingGrams = %d, want 400", detail.Spool.RemainingGrams)
+	if detail.Spool.RemainingGrams != grams(400) {
+		t.Errorf("RemainingGrams = %d, want %d", detail.Spool.RemainingGrams, grams(400))
 	}
 	if detail.Spool.RemainingValue != 880 {
 		t.Errorf("RemainingValue = %d, want 880", detail.Spool.RemainingValue)
@@ -397,9 +427,9 @@ func TestSuccessiveReweighsProduceTheCorrectRemaining(t *testing.T) {
 		remaining unit.Grams
 		delta     unit.Grams
 	}{
-		{"810", 600, -400},
-		{"560", 350, -250},
-		{"460", 250, -100},
+		{"810", grams(600), grams(-400)},
+		{"560", grams(350), grams(-250)},
+		{"460", grams(250), grams(-100)},
 	}
 	for _, w := range weights {
 		detail, err := a.ReweighSpool(ctx(), reweigh(spool.ID, w.measured))
@@ -423,8 +453,8 @@ func TestSuccessiveReweighsProduceTheCorrectRemaining(t *testing.T) {
 			t.Errorf("adjustment %d DeltaGrams = %d, want %d", i, got, w.delta)
 		}
 	}
-	if detail.Spool.RemainingGrams != 250 {
-		t.Errorf("RemainingGrams = %d, want 250", detail.Spool.RemainingGrams)
+	if detail.Spool.RemainingGrams != grams(250) {
+		t.Errorf("RemainingGrams = %d, want %d", detail.Spool.RemainingGrams, grams(250))
 	}
 }
 
@@ -449,8 +479,8 @@ func TestReweighBelowTheEmptySpoolWeightIsRejected(t *testing.T) {
 	if len(detail.Adjustments) != 0 {
 		t.Errorf("got %d adjustments, want none persisted", len(detail.Adjustments))
 	}
-	if detail.Spool.RemainingGrams != 1000 {
-		t.Errorf("RemainingGrams = %d, want 1000", detail.Spool.RemainingGrams)
+	if detail.Spool.RemainingGrams != grams(1000) {
+		t.Errorf("RemainingGrams = %d, want %d", detail.Spool.RemainingGrams, grams(1000))
 	}
 }
 
@@ -591,11 +621,11 @@ func TestSpoolDetailListsAdjustmentsAsRecorded(t *testing.T) {
 	if len(detail.Adjustments) != 2 {
 		t.Fatalf("got %d adjustments, want 2", len(detail.Adjustments))
 	}
-	if got := detail.Adjustments[0].MeasuredGrams; got != 810 {
-		t.Errorf("first MeasuredGrams = %d, want 810", got)
+	if got := detail.Adjustments[0].MeasuredGrams; got != grams(810) {
+		t.Errorf("first MeasuredGrams = %d, want %d", got, grams(810))
 	}
-	if got := detail.Adjustments[1].DeltaGrams; got != -250 {
-		t.Errorf("second DeltaGrams = %d, want -250", got)
+	if got := detail.Adjustments[1].DeltaGrams; got != grams(-250) {
+		t.Errorf("second DeltaGrams = %d, want %d", got, grams(-250))
 	}
 	if got := detail.Adjustments[1].DerivedRemaining; got != detail.Spool.RemainingGrams {
 		t.Errorf("last DerivedRemaining = %d, want the spool's remaining %d", got, detail.Spool.RemainingGrams)

@@ -66,7 +66,7 @@ two Spools of one **Filament Type**.
 |---|---|
 | `filamentType` | **Filament Type** |
 | `brand`, `color` | Identification |
-| `initialGrams` | Filament grams when bought |
+| `initialGrams` | Filament grams when bought, stored as hundredths of a gram |
 | `tareGrams` | Weight of the empty spool, used to interpret scale readings |
 | `purchaseCostCents` | What was paid |
 | `purchaseDate` | When |
@@ -364,7 +364,7 @@ next. All time is bounded at neither end.
 All money is `int64` minor units (cents). Never floats for money. Round only at the end.
 
 ```
-filament  = Σ over usages: grams × usage.costPerGramCents
+filament  = Σ over usages: grams × usage.costPerGramCents   (grams and the price both scaled)
 energy    = hours × kwhPerHour × kwhPriceCents
 overhead  = hours × machineHourlyRateCents
 jobCost   = filament + energy + overhead

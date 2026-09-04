@@ -37,6 +37,10 @@ func date(t *testing.T, s string) time.Time {
 	return d
 }
 
+// grams says a weight the way the operator types it, so a test reads in grams
+// while unit.Grams counts centigrams.
+func grams(g int64) unit.Grams { return unit.Grams(g) * unit.GramScale }
+
 func plaSpool() app.AddSpoolCmd {
 	return app.AddSpoolCmd{
 		FilamentType: domain.PLA.String(),

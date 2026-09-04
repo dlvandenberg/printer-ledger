@@ -15,8 +15,8 @@ func TestEditPrintGramsRecomputesSpoolRemaining(t *testing.T) {
 	design := addedDesign(t, a, quotedDesign())
 	print := recordedPrint(t, a, printOf(design.ID, spool.ID))
 
-	if got := remainingOf(t, a, spool.ID); got != 880 {
-		t.Fatalf("RemainingGrams = %d, want 880", got)
+	if got := remainingOf(t, a, spool.ID); got != grams(880) {
+		t.Fatalf("RemainingGrams = %d, want %d", got, grams(880))
 	}
 
 	cmd := editOfPrint(print)
@@ -25,11 +25,11 @@ func TestEditPrintGramsRecomputesSpoolRemaining(t *testing.T) {
 		t.Fatalf("EditPrint: %v", err)
 	}
 
-	if got := remainingOf(t, a, spool.ID); got != 900 {
-		t.Errorf("RemainingGrams = %d, want 900", got)
+	if got := remainingOf(t, a, spool.ID); got != grams(900) {
+		t.Errorf("RemainingGrams = %d, want %d", got, grams(900))
 	}
-	if got := printByID(t, a, print.ID).UsedGrams; got != 100 {
-		t.Errorf("UsedGrams = %d, want 100", got)
+	if got := printByID(t, a, print.ID).UsedGrams; got != grams(100) {
+		t.Errorf("UsedGrams = %d, want %d", got, grams(100))
 	}
 }
 
@@ -67,8 +67,8 @@ func TestEditPrintRejectsOverdrawingTheSpool(t *testing.T) {
 	if got := fieldError(t, err, domain.FieldUsageGrams(0)); got == "" {
 		t.Errorf("no error on %s, got %v", domain.FieldUsageGrams(0), err)
 	}
-	if got := remainingOf(t, a, spool.ID); got != 880 {
-		t.Errorf("RemainingGrams = %d, want 880", got)
+	if got := remainingOf(t, a, spool.ID); got != grams(880) {
+		t.Errorf("RemainingGrams = %d, want %d", got, grams(880))
 	}
 }
 
@@ -170,8 +170,8 @@ func TestDeletePrintReturnsFilamentToTheSpool(t *testing.T) {
 	if len(prints) != 0 {
 		t.Errorf("ListPrints returned %d prints, want 0", len(prints))
 	}
-	if got := remainingOf(t, a, spool.ID); got != 1000 {
-		t.Errorf("RemainingGrams = %d, want 1000", got)
+	if got := remainingOf(t, a, spool.ID); got != grams(1000) {
+		t.Errorf("RemainingGrams = %d, want %d", got, grams(1000))
 	}
 }
 

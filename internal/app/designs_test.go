@@ -38,8 +38,8 @@ func TestAddDesignThenList(t *testing.T) {
 	if got.DefaultFilamentType != domain.PLA {
 		t.Errorf("DefaultFilamentType = %q, want PLA", got.DefaultFilamentType)
 	}
-	if got.EstimatedGrams != 48 {
-		t.Errorf("EstimatedGrams = %d, want 48", got.EstimatedGrams)
+	if got.EstimatedGrams != grams(48) {
+		t.Errorf("EstimatedGrams = %d, want %d", got.EstimatedGrams, grams(48))
 	}
 	if got.EstimatedMinutes != 331 {
 		t.Errorf("EstimatedMinutes = %d, want 331", got.EstimatedMinutes)
@@ -182,8 +182,8 @@ func TestEditDesignUpdatesEstimatesAfterAReslice(t *testing.T) {
 	if got.Name != "Cable clip v2" {
 		t.Errorf("Name = %q, want Cable clip v2", got.Name)
 	}
-	if got.EstimatedGrams != 52 {
-		t.Errorf("EstimatedGrams = %d, want 52", got.EstimatedGrams)
+	if got.EstimatedGrams != grams(52) {
+		t.Errorf("EstimatedGrams = %d, want %d", got.EstimatedGrams, grams(52))
 	}
 	if got.EstimatedMinutes != 362 {
 		t.Errorf("EstimatedMinutes = %d, want 362", got.EstimatedMinutes)
@@ -252,7 +252,7 @@ func TestEditDesignRejectsAnUnknownDesign(t *testing.T) {
 		ID:                  404,
 		Name:                "Ghost",
 		DefaultFilamentType: domain.PLA,
-		EstimatedGrams:      48,
+		EstimatedGrams:      grams(48),
 		EstimatedMinutes:    331,
 		MarginPct:           5000,
 	})

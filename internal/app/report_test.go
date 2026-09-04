@@ -274,8 +274,8 @@ func TestReportInventoryValuesUnsoldCopiesAndSpools(t *testing.T) {
 	if inventory.UnsoldValue != 235 {
 		t.Errorf("UnsoldValue = %d, want 235", inventory.UnsoldValue)
 	}
-	if inventory.SpoolGrams != 880 {
-		t.Errorf("SpoolGrams = %d, want 880", inventory.SpoolGrams)
+	if inventory.SpoolGrams != grams(880) {
+		t.Errorf("SpoolGrams = %d, want %d", inventory.SpoolGrams, grams(880))
 	}
 	if inventory.SpoolValue != 1936 {
 		t.Errorf("SpoolValue = %d, want 1936", inventory.SpoolValue)

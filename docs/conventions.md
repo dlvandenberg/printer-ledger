@@ -13,7 +13,7 @@ this document and the surrounding code disagree, the code wins and this document
   for a spool).
 - Money-valued fields end in `Cents` only where the unit is otherwise ambiguous — the domain uses
   the `Cents` type instead (`PurchaseCost Cents`), the SQL column spells it out
-  (`purchase_cost_cents`). Weights: `Grams` type, `initial_grams` column.
+  (`purchase_cost_cents`). Weights: `Grams` type, `initial_centigrams` column.
 - Go identifiers are Go-cased; SQL is `snake_case`; form/validation field keys are `camelCase`
   string constants in the domain (`domain.FieldPurchaseCost = "purchaseCost"`).
 - The operator is "the operator", never "the user". One person uses this app.

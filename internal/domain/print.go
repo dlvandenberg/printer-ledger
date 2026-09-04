@@ -202,14 +202,14 @@ func (c PrintCost) CostPerCopy(quantity unit.Copies) unit.Cents {
 	return c.JobCost() / unit.Cents(quantity)
 }
 
-// filamentCost sums in hundredths of a cent and rounds once, so a gram price
-// that is not a whole cent does not round on every row (ADR-0002).
+// filamentCost sums centigrams times a price per whole gram and rounds once, so
+// a gram price that is not a whole cent does not round on every row (ADR-0002).
 func (p Print) filamentCost() unit.Cents {
-	var hundredths int64
+	var scaled int64
 	for _, usage := range p.Usages {
-		hundredths += int64(usage.Grams) * int64(usage.CostPerGram)
+		scaled += int64(usage.Grams) * int64(usage.CostPerGram)
 	}
-	return unit.Cents(roundDiv(hundredths, unit.GramPriceScale))
+	return unit.Cents(roundDiv(scaled, unit.GramPriceScale*unit.GramScale))
 }
 
 // FilamentType is the type the energy rate is looked up by. All usage rows are

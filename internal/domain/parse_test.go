@@ -71,14 +71,15 @@ func TestParseGrams(t *testing.T) {
 		want    unit.Grams
 		wantErr bool
 	}{
-		{in: "1000", want: 1000},
-		{in: " 210 ", want: 210},
-		{in: "750g", want: 750},
+		{in: "1000", want: 100_000},
+		{in: " 210 ", want: 21_000},
+		{in: "750g", want: 75_000},
 		{in: "0", want: 0},
-		{in: "-1", want: -1},
+		{in: "-1", want: -100},
 		{in: "", wantErr: true},
 		{in: "1.5", wantErr: true},
 		{in: "lots", wantErr: true},
+		{in: "200000000000000000", wantErr: true},
 	}
 
 	for _, tc := range tests {
@@ -95,6 +96,24 @@ func TestParseGrams(t *testing.T) {
 		}
 		if got != tc.want {
 			t.Errorf("ParseGrams(%q) = %d, want %d", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestFormatGrams(t *testing.T) {
+	tests := []struct {
+		in   unit.Grams
+		want string
+	}{
+		{in: 100_000, want: "1000g"},
+		{in: 21_000, want: "210g"},
+		{in: 0, want: "0g"},
+		{in: -60_000, want: "-600g"},
+	}
+
+	for _, tc := range tests {
+		if got := unit.FormatGrams(tc.in); got != tc.want {
+			t.Errorf("FormatGrams(%d) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
 }

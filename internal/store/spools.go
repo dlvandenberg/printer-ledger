@@ -11,14 +11,14 @@ import (
 )
 
 const spoolLedgerQuery = `
-SELECT s.id, s.filament_type, s.brand, s.color, s.initial_grams, s.tare_grams,
+SELECT s.id, s.filament_type, s.brand, s.color, s.initial_centigrams, s.tare_centigrams,
        s.purchase_cost_cents, s.purchase_date,
-       COALESCE((SELECT SUM(u.grams) FROM filament_usages u WHERE u.spool_id = s.id), 0) AS used_grams,
-       COALESCE((SELECT SUM(a.delta_grams) FROM spool_adjustments a WHERE a.spool_id = s.id), 0) AS adjusted_grams
+       COALESCE((SELECT SUM(u.centigrams) FROM filament_usages u WHERE u.spool_id = s.id), 0) AS used_centigrams,
+       COALESCE((SELECT SUM(a.delta_centigrams) FROM spool_adjustments a WHERE a.spool_id = s.id), 0) AS adjusted_centigrams
 FROM spools s`
 
 const spoolAdjustmentQuery = `
-SELECT a.id, a.spool_id, a.measured_grams, a.delta_grams,
+SELECT a.id, a.spool_id, a.measured_centigrams, a.delta_centigrams,
        a.adjusted_on, a.note
 FROM spool_adjustments a`
 
@@ -26,7 +26,7 @@ var _ domain.SpoolRepository = &Store{}
 
 func (s *Store) CreateSpool(ctx context.Context, sp domain.Spool) (domain.Spool, error) {
 	res, err := s.q().ExecContext(ctx, `
-INSERT INTO spools (filament_type, brand, color, initial_grams, tare_grams,
+INSERT INTO spools (filament_type, brand, color, initial_centigrams, tare_centigrams,
                     purchase_cost_cents, purchase_date)
 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		string(sp.FilamentType), sp.Brand, sp.Color, int64(sp.InitialGrams),
@@ -48,8 +48,8 @@ UPDATE spools
    SET filament_type       = ?,
        brand               = ?,
        color               = ?,
-       initial_grams       = ?,
-       tare_grams          = ?,
+       initial_centigrams  = ?,
+       tare_centigrams     = ?,
        purchase_cost_cents = ?,
        purchase_date       = ?
  WHERE id = ?`,
@@ -147,7 +147,7 @@ func scanSpoolLedger(row scanner) (domain.SpoolLedger, error) {
 
 func (s *Store) CreateSpoolAdjustment(ctx context.Context, a domain.SpoolAdjustment) (domain.SpoolAdjustment, error) {
 	res, err := s.q().ExecContext(ctx, `
-INSERT INTO spool_adjustments (spool_id, measured_grams, delta_grams,
+INSERT INTO spool_adjustments (spool_id, measured_centigrams, delta_centigrams,
                                adjusted_on, note)
 VALUES (?, ?, ?, ?, ?)`,
 		a.SpoolID, int64(a.MeasuredGrams), int64(a.DeltaGrams),

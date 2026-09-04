@@ -20,7 +20,7 @@ SELECT p.id, p.design_id, p.date, p.quantity, p.minutes,
 FROM prints p`
 
 const filamentUsageQuery = `
-SELECT u.id, u.print_id, u.spool_id, u.grams, u.cost_per_gram_hundredths
+SELECT u.id, u.print_id, u.spool_id, u.centigrams, u.cost_per_gram_hundredths
 FROM filament_usages u`
 
 var _ domain.PrintRepository = &Store{}
@@ -106,7 +106,7 @@ func (s *Store) replaceFilamentUsages(ctx context.Context, p domain.Print) ([]do
 	usages := make([]domain.FilamentUsage, 0, len(p.Usages))
 	for _, usage := range p.Usages {
 		res, err := s.q().ExecContext(ctx, `
-INSERT INTO filament_usages (print_id, spool_id, grams, cost_per_gram_hundredths)
+INSERT INTO filament_usages (print_id, spool_id, centigrams, cost_per_gram_hundredths)
 VALUES (?, ?, ?, ?)`,
 			p.ID, usage.SpoolID, int64(usage.Grams), int64(usage.CostPerGram))
 		if err != nil {
