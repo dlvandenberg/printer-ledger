@@ -23,6 +23,7 @@ type SettingsView struct {
 	DefaultMargin       unit.Percent
 	MinMargin           unit.Percent
 	PowerRates          []PowerRateView
+	LedgerFile          string
 }
 
 type PowerRateView struct {
@@ -36,7 +37,7 @@ func (a *App) Settings(ctx context.Context) (SettingsView, error) {
 	if err != nil {
 		return SettingsView{}, err
 	}
-	return toSettingsView(settings), nil
+	return a.toSettingsView(settings), nil
 }
 
 func (a *App) UpdateSettings(ctx context.Context, cmd UpdateSettingsCmd) (SettingsView, error) {
@@ -57,7 +58,7 @@ func (a *App) UpdateSettings(ctx context.Context, cmd UpdateSettingsCmd) (Settin
 		if err != nil {
 			return err
 		}
-		view = toSettingsView(stored)
+		view = a.toSettingsView(stored)
 		return nil
 	})
 	if err != nil {
@@ -86,7 +87,7 @@ func parseUpdateSettings(cmd UpdateSettingsCmd, current domain.Settings) (domain
 	return validate(settings, errs, domain.NewSettings)
 }
 
-func toSettingsView(s domain.Settings) SettingsView {
+func (a *App) toSettingsView(s domain.Settings) SettingsView {
 	rates := make([]PowerRateView, 0, len(s.PowerRates))
 	for _, filamentType := range domain.FilamentTypes() {
 		rate := s.PowerRate(filamentType)
@@ -103,5 +104,6 @@ func toSettingsView(s domain.Settings) SettingsView {
 		DefaultMargin:       s.DefaultMargin,
 		MinMargin:           s.MinMargin,
 		PowerRates:          rates,
+		LedgerFile:          a.ledgerFile(),
 	}
 }

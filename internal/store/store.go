@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 	_ "modernc.org/sqlite" // pure-Go driver: CGO_ENABLED=0 still builds (ADR-0009)
 )
-
-const DefaultPath = "./printer-ledger.db"
 
 type queryer interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
@@ -18,11 +18,18 @@ type queryer interface {
 }
 
 type Store struct {
-	db *sql.DB
-	tx *sql.Tx // non-nil on the Store handed to an InTx callback
+	db   *sql.DB
+	tx   *sql.Tx // non-nil on the Store handed to an InTx callback
+	path string
 }
 
 func Open(path string) (*Store, error) {
+	if dir := filepath.Dir(path); dir != "" {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			return nil, fmt.Errorf("create %s: %w", dir, err)
+		}
+	}
+
 	dsn := fmt.Sprintf("file:%s?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)", path)
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
@@ -37,7 +44,7 @@ func Open(path string) (*Store, error) {
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
 
-	s := &Store{db: db}
+	s := &Store{db: db, path: path}
 	if err := s.migrate(context.Background()); err != nil {
 		//nolint:errcheck
 		db.Close()
@@ -61,6 +68,8 @@ func MustOpen(path string) *Store {
 
 func (s *Store) Close() error { return s.db.Close() }
 
+func (s *Store) Location() string { return s.path }
+
 func (s *Store) InTx(ctx context.Context, fn func(domain.Database) error) error {
 	return s.inTx(ctx, func(tx *Store) error { return fn(tx) })
 }
@@ -75,7 +84,7 @@ func (s *Store) inTx(ctx context.Context, fn func(*Store) error) error {
 	}
 	//nolint:errcheck
 	defer tx.Rollback()
-	if err := fn(&Store{db: s.db, tx: tx}); err != nil {
+	if err := fn(&Store{db: s.db, tx: tx, path: s.path}); err != nil {
 		return err
 	}
 	return tx.Commit()

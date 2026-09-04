@@ -276,3 +276,24 @@ func TestUpdateSettingsReportsTheParseFailureNotTheInvariantItTrips(t *testing.T
 		t.Errorf("kwhPrice error = %q, want %q", msg, unit.ErrMalformedMoney)
 	}
 }
+
+func TestSettingsReportsTheLedgerFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ledger.db")
+	a := newAppAt(t, path)
+
+	view, err := a.Settings(ctx())
+	if err != nil {
+		t.Fatalf("Settings: %v", err)
+	}
+	if view.LedgerFile != path {
+		t.Errorf("LedgerFile = %q, want %q", view.LedgerFile, path)
+	}
+
+	updated, err := a.UpdateSettings(ctx(), settingsUpdate())
+	if err != nil {
+		t.Fatalf("UpdateSettings: %v", err)
+	}
+	if updated.LedgerFile != path {
+		t.Errorf("LedgerFile after update = %q, want %q", updated.LedgerFile, path)
+	}
+}

@@ -105,6 +105,9 @@ func (m settingsModel) View() string {
 		fmt.Fprintf(&b, "  %-6s  %8s  %-8s\n",
 			rate.FilamentType, unit.FormatKwhPerHour(rate.KwhPerHour), rateSource(rate.Measured))
 	}
+
+	b.WriteString("\n")
+	fmt.Fprintf(&b, "  %s\n", helpStyle.Render("ledger file  "+m.view.LedgerFile))
 	return b.String()
 }
 
