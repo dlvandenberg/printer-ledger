@@ -27,5 +27,7 @@ const (
 	// Ctrl modifier
 	KeyCtrlC = "ctrl+c"
 	KeyCtrlN = "ctrl+n"
+	KeyCtrlP = "ctrl+p"
+	KeyCtrlR = "ctrl+r"
 	KeyCtrlX = "ctrl+x"
 )

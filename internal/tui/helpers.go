@@ -22,3 +22,11 @@ func truncate(s string, width int) string {
 	}
 	return string(r[:width-1]) + "…"
 }
+
+func dropLastRune(s string) string {
+	r := []rune(s)
+	if len(r) == 0 {
+		return s
+	}
+	return string(r[:len(r)-1])
+}

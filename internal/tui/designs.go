@@ -199,6 +199,10 @@ func (m *designsModel) openQuote(id int64) {
 }
 
 func (m designsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	if cmd, handled := m.form.Update(msg); handled {
+		return m, cmd
+	}
+
 	switch msg.String() {
 	case KeyEsc:
 		m.form = nil
@@ -224,7 +228,7 @@ func (m designsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		}
 		return m, nil
 	}
-	return m, m.form.Update(msg)
+	return m, nil
 }
 
 func (m designsModel) submitForm() error {

@@ -160,6 +160,11 @@ func (m salesModel) updateConfirm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 }
 
 func (m salesModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	if cmd, handled := m.form.Update(msg); handled {
+		m.reprice()
+		return m, cmd
+	}
+
 	switch msg.String() {
 	case KeyEsc:
 		m.form = nil
@@ -181,9 +186,7 @@ func (m salesModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		return m, nil
 	}
 
-	cmd := m.form.Update(msg)
-	m.reprice()
-	return m, cmd
+	return m, nil
 }
 
 func (m salesModel) submitForm() error {
@@ -213,6 +216,9 @@ func (m *salesModel) reprice() {
 
 func (m salesModel) View() string {
 	if m.form != nil {
+		if m.form.PickerOpen() {
+			return m.failure() + m.form.View()
+		}
 		return m.failure() + m.form.View() + "\n" + priceGuide(m.preview)
 	}
 

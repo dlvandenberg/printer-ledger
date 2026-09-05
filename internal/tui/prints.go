@@ -65,7 +65,7 @@ func (m *printsModel) reload() error {
 
 func (m printsModel) Help() string {
 	if m.form != nil {
-		return fmt.Sprintf("%s · %s add spool row · %s remove spool row", m.form.Help(), KeyCtrlN, KeyCtrlX)
+		return m.form.Help()
 	}
 	if m.confirm != nil {
 		return m.confirm.Help()
@@ -140,6 +140,7 @@ func (m *printsModel) openForm() error {
 	m.designs = designs
 	m.spools = spools
 	m.form = newPrintForm(designs, spools, draft)
+	m.reserveUsageChords()
 	m.usageRows = 1
 	m.drafted, m.priced = "", ""
 	m.reprice()
@@ -163,6 +164,7 @@ func (m *printsModel) openEditForm(print app.PrintView) error {
 	m.designs = designs
 	m.spools = spools
 	m.form, m.usageRows = newEditPrintForm(designs, spools, print)
+	m.reserveUsageChords()
 	m.drafted = m.form.Value(domain.FieldDesignID) + "|" + m.form.Value(domain.FieldQuantity)
 	m.priced = ""
 	m.reprice()
@@ -191,6 +193,12 @@ func (m printsModel) updateConfirm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 }
 
 func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	if cmd, handled := m.form.Update(msg); handled {
+		m.applyDraft()
+		m.reprice()
+		return m, cmd
+	}
+
 	switch msg.String() {
 	case KeyEsc:
 		m.form = nil
@@ -210,7 +218,7 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 			m.loadErr = err
 		}
 		return m, nil
-	case KeyCtrlN:
+	case KeyCtrlR:
 		m.addUsageRow()
 		return m, nil
 	case KeyCtrlX:
@@ -218,10 +226,7 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		return m, nil
 	}
 
-	cmd := m.form.Update(msg)
-	m.applyDraft()
-	m.reprice()
-	return m, cmd
+	return m, nil
 }
 
 func (m printsModel) submitForm() error {
@@ -236,6 +241,11 @@ func (m printsModel) submitForm() error {
 // addUsageRow and removeUsageRow record a mid-print spool swap as one Print
 // (ADR-0012). A row change drops the errors, which are keyed by row. The new
 // row opens on the Spool above it, so an untouched row cannot mix types.
+func (m *printsModel) reserveUsageChords() {
+	m.form.Reserve(KeyCtrlR, "add spool row")
+	m.form.Reserve(KeyCtrlX, "remove spool row")
+}
+
 func (m *printsModel) addUsageRow() {
 	above := m.form.Value(domain.FieldUsageSpool(m.usageRows - 1))
 	m.form.Append(usageRowSpecs(m.usageRows, m.spools, "", above)...)
@@ -313,6 +323,9 @@ func costInputs(cmd app.RecordPrintCmd) string {
 
 func (m printsModel) View() string {
 	if m.form != nil {
+		if m.form.PickerOpen() {
+			return m.failure() + m.form.View()
+		}
 		return m.failure() + m.form.View() + "\n" + costBreakdown(m.preview)
 	}
 

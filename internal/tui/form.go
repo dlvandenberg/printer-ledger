@@ -47,6 +47,9 @@ type field struct {
 
 func (f field) isChoice() bool { return len(f.spec.Choices) > 0 }
 
+// collapsed hands a long choice row to the picker (ADR-0024).
+func (f field) collapsed() bool { return len(f.spec.Choices) > inlineChoiceLimit }
+
 // form is mutable open state, always held as a *form and mutated in place. Tab
 // models are values that bubbletea replaces on every key, so a form copied
 // along with one would lose focus and choice moves; the owning tab holds the
@@ -56,6 +59,15 @@ type form struct {
 	fields []field
 	focus  int
 	errs   *domain.ValidationError
+	pick   *picker
+	chords []chord
+}
+
+// chord is a key the owning tab acts on itself. The form hands it back rather
+// than feeding it to the focused field, and shows it in the help line.
+type chord struct {
+	key   string
+	label string
 }
 
 func newForm(title string, specs []fieldSpec) *form {
@@ -117,37 +129,87 @@ func (f *form) applyFocus() {
 	}
 }
 
-func (f *form) Update(msg tea.KeyMsg) tea.Cmd {
+// Reserve names a chord the owning tab acts on itself, so a tab never has to
+// ask what the form wants before handing it a key.
+func (f *form) Reserve(key, label string) {
+	f.chords = append(f.chords, chord{key: key, label: label})
+}
+
+func (f *form) PickerOpen() bool { return f.pick != nil }
+
+func (f *form) reserves(key string) bool {
+	for _, c := range f.chords {
+		if c.key == key {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *form) openPicker() {
+	fld := f.fields[f.focus]
+	f.pick = newPicker(fld.spec.Label, fld.spec.Choices, fld.choice)
+}
+
+func (f *form) updatePicker(msg tea.KeyMsg) {
+	open, choice, picked := f.pick.Answer(msg)
+	f.pick = open
+	if picked {
+		f.fields[f.focus].choice = choice
+	}
+}
+
+// Update reports whether the form consumed the key. The picker owns every key
+// while it is open and the enter that opens it (ADR-0024); esc and a Reserve-d
+// chord always come back, so the tab acts on what the form refuses rather than
+// asking first.
+func (f *form) Update(msg tea.KeyMsg) (tea.Cmd, bool) {
+	if f.pick != nil {
+		f.updatePicker(msg)
+		return nil, true
+	}
+
 	switch msg.String() {
+	case KeyEsc:
+		return nil, false
+	case KeyEnter:
+		if !f.fields[f.focus].collapsed() {
+			return nil, false
+		}
+		f.openPicker()
+		return nil, true
 	case KeyTab, KeyDown:
 		f.focus = wrap(f.focus, 1, len(f.fields))
 		f.applyFocus()
-		return nil
+		return nil, true
 	case KeyShiftTab, KeyUp:
 		f.focus = wrap(f.focus, -1, len(f.fields))
 		f.applyFocus()
-		return nil
+		return nil, true
 	case KeyLeft, KeyH:
 		if f.fields[f.focus].isChoice() {
 			f.cycle(-1)
-			return nil
+			return nil, true
 		}
 	case KeyRight, KeyL:
 		if f.fields[f.focus].isChoice() {
 			f.cycle(1)
-			return nil
+			return nil, true
 		}
 	}
 
+	if f.reserves(msg.String()) {
+		return nil, false
+	}
 	if f.fields[f.focus].isChoice() {
-		return nil
+		return nil, true
 	}
 
 	before := f.fields[f.focus].input.Value()
 	var cmd tea.Cmd
 	f.fields[f.focus].input, cmd = f.fields[f.focus].input.Update(msg)
 	f.fields[f.focus].touched = f.fields[f.focus].touched || f.fields[f.focus].input.Value() != before
-	return cmd
+	return cmd, true
 }
 
 func (f *form) cycle(step int) {
@@ -195,11 +257,20 @@ func (f *form) ChoiceIndex(key string) int {
 func (f *form) SetErrors(errs *domain.ValidationError) { f.errs = errs }
 
 func (f *form) Help() string {
+	if f.pick != nil {
+		return f.pick.Help()
+	}
 	keys := []string{fmt.Sprintf("%s/%s next/prev field", KeyTab, KeyShiftTab)}
 	if f.hasChoiceField() {
 		keys = append(keys, fmt.Sprintf("%s/%s (or %s/%s) change choice", KeyLeft, KeyRight, KeyH, KeyL))
 	}
+	if f.hasCollapsedField() {
+		keys = append(keys, fmt.Sprintf("%s pick from list", KeyEnter))
+	}
 	keys = append(keys, fmt.Sprintf("%s save · %s cancel · %s quit", KeyEnter, KeyEsc, KeyCtrlC))
+	for _, c := range f.chords {
+		keys = append(keys, c.key+" "+c.label)
+	}
 	return strings.Join(keys, " · ")
 }
 
@@ -212,7 +283,20 @@ func (f *form) hasChoiceField() bool {
 	return false
 }
 
+func (f *form) hasCollapsedField() bool {
+	for _, fld := range f.fields {
+		if fld.collapsed() {
+			return true
+		}
+	}
+	return false
+}
+
 func (f *form) View() string {
+	if f.pick != nil {
+		return f.pick.View()
+	}
+
 	var b strings.Builder
 	b.WriteString(titleStyle.Render(f.title))
 	b.WriteString("\n\n")
@@ -237,6 +321,12 @@ func (f *form) row(index int, fld field) string {
 func (f *form) control(fld field) string {
 	if !fld.isChoice() {
 		return fld.input.View()
+	}
+	if fld.collapsed() {
+		// Less the two columns activeTabStyle pads with, so a long label still
+		// ends inside the field's column.
+		current := activeTabStyle.Render(truncate(fld.spec.Choices[fld.choice], fieldWidth-2))
+		return fmt.Sprintf("%-*s", fieldWidth, current)
 	}
 	rendered := make([]string, 0, len(fld.spec.Choices))
 	for i, choice := range fld.spec.Choices {

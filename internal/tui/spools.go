@@ -123,6 +123,10 @@ func (m *spoolsModel) openDetail(id int64) {
 }
 
 func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	if cmd, handled := m.form.Update(msg); handled {
+		return m, cmd
+	}
+
 	switch msg.String() {
 	case KeyEsc:
 		m.form = nil
@@ -144,7 +148,7 @@ func (m spoolsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		return m, nil
 	}
 
-	return m, m.form.Update(msg)
+	return m, nil
 }
 
 // submitForm reads the tab's own state to decide which use case the open form
