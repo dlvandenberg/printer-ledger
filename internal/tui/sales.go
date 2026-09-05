@@ -12,7 +12,7 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
-const saleRow = "%s%-10s  %-16s  %10s  %10s\n"
+const saleRow = "%s%-10s  %-26s  %10s  %10s\n"
 
 var errNoSellablePrints = errors.New("no copies available: record a print on the Prints tab first")
 
@@ -240,7 +240,7 @@ func (m salesModel) View() string {
 		}
 		fmt.Fprintf(&b, saleRow, marker,
 			unit.FormatDate(row.Date),
-			truncate(row.DesignName, 16),
+			truncate(row.DesignName, 26),
 			currency+unit.FormatCents(row.Price),
 			currency+unit.FormatCents(row.CostPerCopy))
 	}
