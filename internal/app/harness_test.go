@@ -145,6 +145,12 @@ func quotedDesign() app.AddDesignCmd {
 	return cmd
 }
 
+func spoolColored(color string) app.AddSpoolCmd {
+	cmd := plaSpool()
+	cmd.Color = color
+	return cmd
+}
+
 func spoolPriced(ft domain.FilamentType, grams, cost string) app.AddSpoolCmd {
 	cmd := plaSpool()
 	cmd.FilamentType = ft.String()

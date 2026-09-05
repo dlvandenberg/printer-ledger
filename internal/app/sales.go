@@ -27,9 +27,26 @@ type SaleView struct {
 	ID          int64
 	PrintID     int64
 	DesignName  string
+	Material    MaterialView
 	Date        time.Time
 	Price       unit.Cents
 	CostPerCopy unit.Cents
+}
+
+// MaterialView is what a Print's copies came out in: two Prints of one Design
+// are interchangeable to the ledger but not to a buyer, who is looking at the
+// color. A Print that swapped spools mid-run names every color it used, most
+// filament first.
+type MaterialView struct {
+	FilamentType domain.FilamentType
+	Colors       []string
+}
+
+func materialOf(print domain.Print, spools []domain.SpoolLedger) MaterialView {
+	return MaterialView{
+		FilamentType: print.FilamentType(spools),
+		Colors:       print.SpoolColors(spools),
+	}
 }
 
 // SellablePrintView is a Print a copy can still be sold from, with the two
@@ -39,6 +56,7 @@ type SellablePrintView struct {
 	PrintID           int64
 	DesignID          int64
 	DesignName        string
+	Material          MaterialView
 	Date              time.Time
 	AvailableCopies   unit.Copies
 	CostPerCopy       unit.Cents
@@ -144,6 +162,10 @@ func (a *App) ListSales(ctx context.Context) ([]SaleView, error) {
 	if err != nil {
 		return nil, err
 	}
+	spools, err := a.db.SpoolLedgers(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	byPrint := make(map[int64]domain.PrintLedger, len(ledgers))
 	for _, ledger := range ledgers {
@@ -153,7 +175,7 @@ func (a *App) ListSales(ctx context.Context) ([]SaleView, error) {
 	views := make([]SaleView, 0, len(sales))
 	for _, sale := range sales {
 		ledger := byPrint[sale.PrintID]
-		views = append(views, toSaleView(sale, ledger, byDesign[ledger.Print.DesignID]))
+		views = append(views, toSaleView(sale, ledger, byDesign[ledger.Print.DesignID], spools))
 	}
 	return views, nil
 }
@@ -213,6 +235,7 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 			PrintID:           ledger.Print.ID,
 			DesignID:          design.ID,
 			DesignName:        design.Name,
+			Material:          materialOf(ledger.Print, spools),
 			Date:              ledger.Print.Date,
 			AvailableCopies:   ledger.Available(),
 			CostPerCopy:       ledger.Print.CostPerCopy(),
@@ -313,17 +336,22 @@ func readSaleView(ctx context.Context, tx domain.Database, sale domain.Sale) (Sa
 	if err != nil {
 		return SaleView{}, err
 	}
-	return toSaleView(sale, ledger, design), nil
+	spools, err := tx.SpoolLedgers(ctx)
+	if err != nil {
+		return SaleView{}, err
+	}
+	return toSaleView(sale, ledger, design, spools), nil
 }
 
 // toSaleView carries the frozen cost of the copy but no floor verdict: the
 // floor moves with Settings.minMargin, and a warning is a thing said while the
 // price is being typed, not a judgement re-passed on a past sale (ADR-0016).
-func toSaleView(sale domain.Sale, ledger domain.PrintLedger, design domain.Design) SaleView {
+func toSaleView(sale domain.Sale, ledger domain.PrintLedger, design domain.Design, spools []domain.SpoolLedger) SaleView {
 	return SaleView{
 		ID:          sale.ID,
 		PrintID:     sale.PrintID,
 		DesignName:  design.Name,
+		Material:    materialOf(ledger.Print, spools),
 		Date:        sale.Date,
 		Price:       sale.Price,
 		CostPerCopy: ledger.Print.CostPerCopy(),

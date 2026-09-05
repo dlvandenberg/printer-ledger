@@ -341,6 +341,11 @@ stops one physical object being sold twice. A filtered **Print Ledger**, not a s
 A Sale being edited counts its own copy as returned first, so it keeps naming the Print it sold
 from even when that copy was the last one available.
 
+A Sellable Print is named by its **Design** *and its material* — **Filament Type** and the **Spool**
+colors it drew from. Two Prints of one Design are interchangeable to the ledger but not to a buyer,
+who is looking at the color; a Print that swapped spools mid-run names every color it used, most
+filament first.
+
 ### Minimum Price
 
 `costPerCopy × (1 + Settings.minMargin)`, rounded **up** to the whole cent — the floor a **Sale**

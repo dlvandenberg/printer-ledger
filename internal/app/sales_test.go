@@ -371,3 +371,73 @@ func TestRecordSaleWithoutAPrintFails(t *testing.T) {
 		t.Errorf("printID error = %q, want %q", msg, "is required")
 	}
 }
+
+func TestSellablePrintNamesItsMaterial(t *testing.T) {
+	a := newApp(t)
+	print := stockedPrint(t, a)
+
+	offered, ok := sellablePrint(t, a, print.ID)
+	if !ok {
+		t.Fatalf("print %d is not offered", print.ID)
+	}
+	if offered.Material.FilamentType != domain.PLA {
+		t.Errorf("FilamentType = %s, want %s", offered.Material.FilamentType, domain.PLA)
+	}
+	if len(offered.Material.Colors) != 1 || offered.Material.Colors[0] != "Black" {
+		t.Errorf("Colors = %v, want [Black]", offered.Material.Colors)
+	}
+}
+
+func TestSellablePrintOfASwapNamesBothColorsMostFilamentFirst(t *testing.T) {
+	a := newApp(t)
+	ranOut := addedSpool(t, a, spoolColored("Red"))
+	replacement := addedSpool(t, a, spoolColored("Blue"))
+	design := addedDesign(t, a, quotedDesign())
+	print := recordedPrint(t, a, printOfRows(design.ID, usage(ranOut.ID, "40"), usage(replacement.ID, "80")))
+
+	offered, ok := sellablePrint(t, a, print.ID)
+	if !ok {
+		t.Fatalf("print %d is not offered", print.ID)
+	}
+	if len(offered.Material.Colors) != 2 || offered.Material.Colors[0] != "Blue" || offered.Material.Colors[1] != "Red" {
+		t.Errorf("Colors = %v, want [Blue Red]", offered.Material.Colors)
+	}
+}
+
+// Equal grams leave nothing to order the colors by, so the older Spool goes
+// first: the label must read the same on every reload.
+func TestSellablePrintOrdersEqualGramsByOldestSpool(t *testing.T) {
+	a := newApp(t)
+	first := addedSpool(t, a, spoolColored("Red"))
+	second := addedSpool(t, a, spoolColored("Blue"))
+	design := addedDesign(t, a, quotedDesign())
+	print := recordedPrint(t, a, printOfRows(design.ID, usage(second.ID, "60"), usage(first.ID, "60")))
+
+	offered, ok := sellablePrint(t, a, print.ID)
+	if !ok {
+		t.Fatalf("print %d is not offered", print.ID)
+	}
+	if len(offered.Material.Colors) != 2 || offered.Material.Colors[0] != "Red" || offered.Material.Colors[1] != "Blue" {
+		t.Errorf("Colors = %v, want [Red Blue]", offered.Material.Colors)
+	}
+}
+
+func TestSaleNamesTheMaterialItWasPrintedIn(t *testing.T) {
+	a := newApp(t)
+	print := stockedPrint(t, a)
+	recordSale := recordedSale(t, a, saleOf(print.ID))
+
+	sales, err := a.ListSales(ctx())
+	if err != nil {
+		t.Fatalf("ListSales: %v", err)
+	}
+	if len(sales) != 1 || sales[0].ID != recordSale.ID {
+		t.Fatalf("sales = %v, want the recorded sale", sales)
+	}
+	if sales[0].Material.FilamentType != domain.PLA {
+		t.Errorf("FilamentType = %s, want %s", sales[0].Material.FilamentType, domain.PLA)
+	}
+	if len(sales[0].Material.Colors) != 1 || sales[0].Material.Colors[0] != "Black" {
+		t.Errorf("Colors = %v, want [Black]", sales[0].Material.Colors)
+	}
+}

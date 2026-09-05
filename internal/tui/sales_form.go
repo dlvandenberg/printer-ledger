@@ -50,9 +50,17 @@ func printLabels(prints []app.SellablePrintView) []string {
 	return labels
 }
 
+// printLabel leads with what the copies are — the Design and the material —
+// and follows with the facts about them, so two Prints of one Design in
+// different filament are told apart at the point the Sale names one. Prints
+// alike in all of these are interchangeable: nothing else distinguishes them.
 func printLabel(print app.SellablePrintView) string {
-	return fmt.Sprintf("%s %s %s left",
-		truncate(print.DesignName, 16), unit.FormatDate(print.Date), unit.FormatCopies(print.AvailableCopies))
+	return fmt.Sprintf("%s %s %s %s %s left",
+		truncate(print.DesignName, 16),
+		truncate(material(print.Material), materialWidth),
+		unit.FormatDate(print.Date),
+		money(print.CostPerCopy),
+		unit.FormatCopies(print.AvailableCopies))
 }
 
 func printLabelOf(prints []app.SellablePrintView, id int64) string {

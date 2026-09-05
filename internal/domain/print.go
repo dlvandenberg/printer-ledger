@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
@@ -262,4 +264,37 @@ func findLedger(ledgers []SpoolLedger, spoolID int64) (SpoolLedger, bool) {
 		}
 	}
 	return SpoolLedger{}, false
+}
+
+// SpoolColors names the colors a Print's copies actually came out in, most
+// filament first, so two Prints of one Design can be told apart by the thing a
+// buyer sees. A swap mid-print puts two colors on one Print and both are named.
+// Colors are compared as the operator typed them: folding case would be the
+// first step of a normalisation this ledger does not do.
+func (p Print) SpoolColors(ledgers []SpoolLedger) []string {
+	grams := map[int64]unit.Grams{}
+	order := make([]int64, 0, len(p.Usages))
+	for _, usage := range p.Usages {
+		if _, seen := grams[usage.SpoolID]; !seen {
+			order = append(order, usage.SpoolID)
+		}
+		grams[usage.SpoolID] += usage.Grams
+	}
+
+	slices.SortFunc(order, func(a, b int64) int {
+		if grams[a] != grams[b] {
+			return cmp.Compare(grams[b], grams[a])
+		}
+		return cmp.Compare(a, b)
+	})
+
+	colors := make([]string, 0, len(order))
+	for _, spoolID := range order {
+		ledger, ok := findLedger(ledgers, spoolID)
+		if !ok || slices.Contains(colors, ledger.Spool.Color) {
+			continue
+		}
+		colors = append(colors, ledger.Spool.Color)
+	}
+	return colors
 }
