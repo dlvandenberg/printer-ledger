@@ -137,6 +137,22 @@ func (f *choiceField) update(msg tea.KeyMsg) (tea.Cmd, bool) {
 	return nil, true
 }
 
+func (f *choiceField) picker() *picker {
+	return newPicker(f.spec.Label, f.spec.Choices, f.choice)
+}
+
+// commit takes what a picker chose. The picker was opened on the choices as
+// they were, so a row that has since been rebuilt on a shorter list keeps what
+// it had rather than naming a record off the end of it.
+func (f *choiceField) commit(index int) {
+	if index < 0 || index >= len(f.spec.Choices) {
+		return
+	}
+	f.choice = index
+}
+
+func (f *choiceField) selected() int { return f.choice }
+
 func (f *choiceField) cycle(step int) {
 	if len(f.spec.Choices) == 0 {
 		return
@@ -264,18 +280,16 @@ func (f *form) focusedChoice() (*choiceField, bool) {
 }
 
 func (f *form) openPicker() {
-	fld, ok := f.focusedChoice()
-	if !ok {
-		return
+	if fld, ok := f.focusedChoice(); ok {
+		f.pick = fld.picker()
 	}
-	f.pick = newPicker(fld.label(), fld.spec.Choices, fld.choice)
 }
 
 func (f *form) updatePicker(msg tea.KeyMsg) {
 	open, choice, picked := f.pick.Answer(msg)
 	f.pick = open
 	if fld, ok := f.focusedChoice(); ok && picked {
-		fld.choice = choice
+		fld.commit(choice)
 	}
 }
 
@@ -339,7 +353,7 @@ func (f *form) ChoiceIndex(key string) int {
 	for _, fld := range f.fields {
 		choice, ok := fld.(*choiceField)
 		if ok && choice.key() == key {
-			return choice.choice
+			return choice.selected()
 		}
 	}
 	return -1
