@@ -34,7 +34,6 @@ type printsModel struct {
 	form      *form
 	editing   *app.PrintView
 	confirm   *confirm
-	designs   []app.DesignView
 	spools    []app.SpoolView
 	preview   app.PrintPreviewView
 	usageRows int
@@ -137,7 +136,6 @@ func (m *printsModel) openForm() error {
 
 	m.loadErr = nil
 	m.editing = nil
-	m.designs = designs
 	m.spools = spools
 	m.form = newPrintForm(designs, spools, draft)
 	m.reserveUsageChords()
@@ -161,11 +159,10 @@ func (m *printsModel) openEditForm(print app.PrintView) error {
 
 	m.loadErr = nil
 	m.editing = &print
-	m.designs = designs
 	m.spools = spools
 	m.form, m.usageRows = newEditPrintForm(designs, spools, print)
 	m.reserveUsageChords()
-	m.drafted = m.form.Value(domain.FieldDesignID) + "|" + m.form.Value(domain.FieldQuantity)
+	m.drafted = m.draftKey()
 	m.priced = ""
 	m.reprice()
 	return nil
@@ -231,10 +228,10 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 
 func (m printsModel) submitForm() error {
 	if m.editing != nil {
-		_, err := m.app.EditPrint(context.Background(), editPrintCmd(m.form, m.editing.ID, m.designs, m.spools, m.usageRows))
+		_, err := m.app.EditPrint(context.Background(), editPrintCmd(m.form, m.editing.ID, m.usageRows))
 		return err
 	}
-	_, err := m.app.RecordPrint(context.Background(), recordPrintCmd(m.form, m.designs, m.spools, m.usageRows))
+	_, err := m.app.RecordPrint(context.Background(), recordPrintCmd(m.form, m.usageRows))
 	return err
 }
 
@@ -247,8 +244,8 @@ func (m *printsModel) reserveUsageChords() {
 }
 
 func (m *printsModel) addUsageRow() {
-	above := m.form.Value(domain.FieldUsageSpool(m.usageRows - 1))
-	m.form.Append(usageRowSpecs(m.usageRows, m.spools, "", above)...)
+	above := m.form.Choice(domain.FieldUsageSpool(m.usageRows - 1))
+	m.form.Append(usageRowSpecs(m.usageRows, choicesOf(m.spools, spoolChoice), "", above)...)
 	m.usageRows++
 	m.form.SetErrors(nil)
 	m.reprice()
@@ -272,14 +269,14 @@ func (m *printsModel) applyDraft() {
 	if m.editing != nil {
 		return
 	}
-	key := m.form.Value(domain.FieldDesignID) + "|" + m.form.Value(domain.FieldQuantity)
+	key := m.draftKey()
 	if key == m.drafted {
 		return
 	}
 	m.drafted = key
 
-	designID := designIDAt(m.designs, m.form.ChoiceIndex(domain.FieldDesignID))
-	draft, err := m.app.PrintDraft(context.Background(), designID, m.form.Value(domain.FieldQuantity))
+	draft, err := m.app.PrintDraft(context.Background(),
+		m.form.Choice(domain.FieldDesignID).ID, m.form.Value(domain.FieldQuantity))
 	if err != nil {
 		return
 	}
@@ -287,8 +284,14 @@ func (m *printsModel) applyDraft() {
 	m.form.Prefill(domain.FieldUsageGrams(0), unit.FormatGrams(draft.Grams))
 }
 
+// draftKey is what a draft was fetched for. It names the Design by id, so two
+// Designs of one name are not one key.
+func (m *printsModel) draftKey() string {
+	return fmt.Sprintf("%d|%s", m.form.Choice(domain.FieldDesignID).ID, m.form.Value(domain.FieldQuantity))
+}
+
 func (m *printsModel) reprice() {
-	cmd := recordPrintCmd(m.form, m.designs, m.spools, m.usageRows)
+	cmd := recordPrintCmd(m.form, m.usageRows)
 	key := costInputs(cmd)
 	if key == m.priced {
 		return

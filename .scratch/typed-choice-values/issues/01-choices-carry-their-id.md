@@ -8,15 +8,15 @@ Filament Type rows have no id: their choice is the label itself, which the use c
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A choice offered to a form carries both what is rendered and what it names
-- [ ] The form returns the named value directly; `ChoiceIndex` and the three `*IDAt` helpers in `internal/tui` are gone
-- [ ] Filament Type rows, which name a value rather than a record, go through the same shape
-- [ ] The picker still commits the choice it was opened on, so two rows that render alike still name different records (ADR-0024)
-- [ ] Recording and editing a Print and a Sale write the same ids as before, including a Print whose Filament Usage rows name two different Spools
-- [ ] Prefilled edit forms open on the record the row already names
-- [ ] `make lint` and `make test` pass
+- [x] A choice offered to a form carries both what is rendered and what it names
+- [x] The form returns the named value directly; `ChoiceIndex` and the three `*IDAt` helpers in `internal/tui` are gone
+- [x] Filament Type rows, which name a value rather than a record, go through the same shape
+- [x] The picker still commits the choice it was opened on, so two rows that render alike still name different records (ADR-0024)
+- [x] Recording and editing a Print and a Sale write the same ids as before, including a Print whose Filament Usage rows name two different Spools
+- [x] Prefilled edit forms open on the record the row already names
+- [x] `make lint` and `make test` pass
 
 ## Comments
 

@@ -25,7 +25,6 @@ type salesModel struct {
 	form    *form
 	editing *app.SaleView
 	confirm *confirm
-	prints  []app.SellablePrintView
 	preview app.SalePreviewView
 	priced  string
 	loadErr error
@@ -113,7 +112,6 @@ func (m *salesModel) openForm() error {
 
 	m.loadErr = nil
 	m.editing = nil
-	m.prints = prints
 	m.form = newSaleForm(prints)
 	m.priced = ""
 	m.reprice()
@@ -130,7 +128,6 @@ func (m *salesModel) openEditForm(sale app.SaleView) error {
 
 	m.loadErr = nil
 	m.editing = &sale
-	m.prints = prints
 	m.form = newEditSaleForm(prints, sale)
 	m.priced = ""
 	m.reprice()
@@ -191,15 +188,15 @@ func (m salesModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 
 func (m salesModel) submitForm() error {
 	if m.editing != nil {
-		_, err := m.app.EditSale(context.Background(), editSaleCmd(m.form, m.editing.ID, m.prints))
+		_, err := m.app.EditSale(context.Background(), editSaleCmd(m.form, m.editing.ID))
 		return err
 	}
-	_, err := m.app.RecordSale(context.Background(), recordSaleCmd(m.form, m.prints))
+	_, err := m.app.RecordSale(context.Background(), recordSaleCmd(m.form))
 	return err
 }
 
 func (m *salesModel) reprice() {
-	cmd := recordSaleCmd(m.form, m.prints)
+	cmd := recordSaleCmd(m.form)
 	key := fmt.Sprintf("%d|%s", cmd.PrintID, cmd.Price)
 	if key == m.priced {
 		return

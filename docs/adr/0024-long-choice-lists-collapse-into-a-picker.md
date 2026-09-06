@@ -38,8 +38,8 @@ labels — 52 columns — on one inline row, and collapses five Designs named `V
 room to spare.
 
 The picker lives in `internal/tui` alongside the form, and commits an index into the Choices it
-was opened on — the same index `ChoiceIndex` already returns, so two rows that read the same still
-name different records.
+was opened on. Each choice carries the id of the record it names, so what the row hands back is
+that record, and two rows that read the same still name different ones.
 
 `ctrl+n` was the Print form's "add Filament Usage row". It becomes `ctrl+r`. A tab could instead
 have guarded `ctrl+n` on whether the picker was open, but one chord meaning two things depending

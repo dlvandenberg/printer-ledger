@@ -8,7 +8,7 @@ import (
 
 func newSpoolForm() *form {
 	return newForm("Add spool", []fieldSpec{
-		choiceSpec{Key: domain.FieldFilamentType, Label: "Filament type", Choices: domain.FilamentTypeNames()},
+		choiceSpec{Key: domain.FieldFilamentType, Label: "Filament type", Choices: valueChoices(domain.FilamentTypeNames())},
 		textSpec{Key: domain.FieldBrand, Label: "Brand", Placeholder: "Bambu"},
 		textSpec{Key: domain.FieldColor, Label: "Colour", Placeholder: "Black"},
 		textSpec{Key: domain.FieldInitialGrams, Label: "Filament grams", Placeholder: "1000"},

@@ -46,11 +46,42 @@ type textSpec struct {
 }
 
 type choiceSpec struct {
-	Key     string
-	Label   string
-	Choices []string
-	Choice  string
+	Key      string
+	Label    string
+	Choices  []choice
+	Selected choice
 }
+
+// choice is one option on a choice row: what the operator reads, and what it
+// names. A row over records names them by ID; a row over values, such as
+// Filament Type, names its own label and leaves ID zero.
+type choice struct {
+	Label string
+	ID    int64
+}
+
+func choicesOf[T any](items []T, of func(T) choice) []choice {
+	choices := make([]choice, 0, len(items))
+	for _, item := range items {
+		choices = append(choices, of(item))
+	}
+	return choices
+}
+
+// choiceFor is the choice naming one record, or the zero choice when the list
+// no longer offers it — a row prefilled with that opens on its first option.
+func choiceFor(choices []choice, id int64) choice {
+	for _, c := range choices {
+		if c.ID == id {
+			return c
+		}
+	}
+	return choice{}
+}
+
+func valueChoice(label string) choice { return choice{Label: label} }
+
+func valueChoices(labels []string) []choice { return choicesOf(labels, valueChoice) }
 
 // field is one open row. The form holds pointers and mutates them in place;
 // only the row itself knows what a key means once the form has taken the keys
@@ -86,8 +117,8 @@ func (s textSpec) newField() field {
 
 func (s choiceSpec) newField() field {
 	f := &choiceField{spec: s}
-	for i, choice := range s.Choices {
-		if choice == s.Choice {
+	for i, c := range s.Choices {
+		if c == s.Selected {
 			f.choice = i
 		}
 	}
@@ -102,9 +133,11 @@ func (f *choiceField) label() string { return f.spec.Label }
 
 func (f *textField) value() string { return f.input.Value() }
 
-func (f *choiceField) value() string {
+func (f *choiceField) value() string { return f.selection().Label }
+
+func (f *choiceField) selection() choice {
 	if len(f.spec.Choices) == 0 {
-		return ""
+		return choice{}
 	}
 	return f.spec.Choices[f.choice]
 }
@@ -138,7 +171,7 @@ func (f *choiceField) update(msg tea.KeyMsg) (tea.Cmd, bool) {
 }
 
 func (f *choiceField) picker() *picker {
-	return newPicker(f.spec.Label, f.spec.Choices, f.choice)
+	return newPicker(f.spec.Label, f.labels(), f.choice)
 }
 
 // commit takes what a picker chose. The picker was opened on the choices as
@@ -150,8 +183,6 @@ func (f *choiceField) commit(index int) {
 	}
 	f.choice = index
 }
-
-func (f *choiceField) selected() int { return f.choice }
 
 func (f *choiceField) cycle(step int) {
 	if len(f.spec.Choices) == 0 {
@@ -192,14 +223,22 @@ func (f *choiceField) collapsed() bool {
 
 func (f *choiceField) inline() string {
 	rendered := make([]string, 0, len(f.spec.Choices))
-	for i, choice := range f.spec.Choices {
+	for i, c := range f.spec.Choices {
 		style := inactiveTabStyle
 		if i == f.choice {
 			style = activeTabStyle
 		}
-		rendered = append(rendered, style.Render(choice))
+		rendered = append(rendered, style.Render(c.Label))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, rendered...)
+}
+
+func (f *choiceField) labels() []string {
+	labels := make([]string, 0, len(f.spec.Choices))
+	for _, c := range f.spec.Choices {
+		labels = append(labels, c.Label)
+	}
+	return labels
 }
 
 // form is mutable open state, always held as a *form and mutated in place. Tab
@@ -347,16 +386,16 @@ func (f *form) Prefill(key, value string) {
 	}
 }
 
-// ChoiceIndex locates a choice by position rather than by label, so two rows
-// that read the same still name different records.
-func (f *form) ChoiceIndex(key string) int {
+// Choice is what a choice row names, so a caller writes an id straight into a
+// command rather than indexing back into the list the row was built from.
+func (f *form) Choice(key string) choice {
 	for _, fld := range f.fields {
-		choice, ok := fld.(*choiceField)
-		if ok && choice.key() == key {
-			return choice.selected()
+		c, ok := fld.(*choiceField)
+		if ok && c.key() == key {
+			return c.selection()
 		}
 	}
-	return -1
+	return choice{}
 }
 
 func (f *form) SetErrors(errs *domain.ValidationError) { f.errs = errs }

@@ -128,7 +128,8 @@ A renderer. It reads views and sends commands; it computes nothing.
   holds exactly one pointer to it from open to close. Focus and choice moves would be lost if a
   form were copied along with the value model.
 - A tab declares a form as `[]fieldSpec` (key, label, choices, placeholder, prefill) and reads it
-  back with `f.Value(key)`. The form owns focus, layout, choice cycling and error placement; the
+  back with `f.Value(key)`, or with `f.Choice(key)` where a row names a record: a choice carries the
+  id of what it names, so a command takes that id rather than a position into a list. The form owns focus, layout, choice cycling and error placement; the
   tab owns which fields exist. A `*_form.go` file is the adapter between one form and one
   `app.*Cmd`.
 - On a failed save the tab hands the `*domain.ValidationError` to `f.SetErrors` and leaves the form
