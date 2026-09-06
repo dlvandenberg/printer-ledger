@@ -27,28 +27,158 @@ var (
 // fieldSpec declares one row of a form. A tab supplies the keys, labels and
 // kinds; the form owns focus, layout, choice cycling and error placement. Key
 // must be a domain.Field* constant, so a use case's ValidationError lands on
-// the right row. A non-empty Choices makes the row a choice field; the rest are
-// text fields, and choice and text rows sit in one list.
-type fieldSpec struct {
-	Key         string
-	Label       string
-	Choices     []string
-	Placeholder string
-	Prefill     string
-	Choice      string
+// the right row. There is one spec type per kind of row, so a row cannot carry
+// a placeholder and a choice list at once, and both kinds sit in one list.
+type fieldSpec interface {
+	newField() field
 }
 
-type field struct {
-	spec    fieldSpec
+type textSpec struct {
+	Key         string
+	Label       string
+	Placeholder string
+	Prefill     string
+}
+
+type choiceSpec struct {
+	Key     string
+	Label   string
+	Choices []string
+	Choice  string
+}
+
+// field is one open row. The form holds pointers and mutates them in place;
+// only the row itself knows what a key means once the form has taken the keys
+// that move between rows.
+type field interface {
+	key() string
+	label() string
+	control() string
+	value() string
+	setFocus(bool)
+	update(msg tea.KeyMsg) (tea.Cmd, bool)
+}
+
+type textField struct {
+	spec    textSpec
 	input   textinput.Model
-	choice  int
 	touched bool
 }
 
-func (f field) isChoice() bool { return len(f.spec.Choices) > 0 }
+type choiceField struct {
+	spec   choiceSpec
+	choice int
+}
+
+func (s textSpec) newField() field {
+	in := textinput.New()
+	in.Placeholder = s.Placeholder
+	in.SetValue(s.Prefill)
+	in.CharLimit = fieldCharLimit
+	in.Width = fieldWidth
+	return &textField{spec: s, input: in}
+}
+
+func (s choiceSpec) newField() field {
+	f := &choiceField{spec: s}
+	for i, choice := range s.Choices {
+		if choice == s.Choice {
+			f.choice = i
+		}
+	}
+	return f
+}
+
+func (f *textField) key() string   { return f.spec.Key }
+func (f *choiceField) key() string { return f.spec.Key }
+
+func (f *textField) label() string   { return f.spec.Label }
+func (f *choiceField) label() string { return f.spec.Label }
+
+func (f *textField) value() string { return f.input.Value() }
+
+func (f *choiceField) value() string {
+	if len(f.spec.Choices) == 0 {
+		return ""
+	}
+	return f.spec.Choices[f.choice]
+}
+
+func (f *textField) setFocus(on bool) {
+	if on {
+		f.input.Focus()
+		return
+	}
+	f.input.Blur()
+}
+
+func (f *choiceField) setFocus(bool) {}
+
+func (f *textField) update(msg tea.KeyMsg) (tea.Cmd, bool) {
+	before := f.input.Value()
+	var cmd tea.Cmd
+	f.input, cmd = f.input.Update(msg)
+	f.touched = f.touched || f.input.Value() != before
+	return cmd, true
+}
+
+func (f *choiceField) update(msg tea.KeyMsg) (tea.Cmd, bool) {
+	switch msg.String() {
+	case KeyLeft, KeyH:
+		f.cycle(-1)
+	case KeyRight, KeyL:
+		f.cycle(1)
+	}
+	return nil, true
+}
+
+func (f *choiceField) cycle(step int) {
+	if len(f.spec.Choices) == 0 {
+		return
+	}
+	f.choice = wrap(f.choice, step, len(f.spec.Choices))
+}
+
+// prefill writes a derived value into a row the operator has not typed into,
+// so a changed quantity moves an estimate but never overwrites an actual.
+func (f *textField) prefill(value string) {
+	if f.touched {
+		return
+	}
+	f.input.SetValue(value)
+	// SetValue only clamps the cursor, so without this a backspace deletes
+	// from wherever the last, shorter, prefill ended.
+	f.input.CursorEnd()
+}
+
+func (f *textField) control() string { return f.input.View() }
+
+func (f *choiceField) control() string {
+	if !f.collapsed() {
+		return fmt.Sprintf("%-*s", fieldWidth, f.inline())
+	}
+	// Less the two columns activeTabStyle pads with, so a long label still
+	// ends inside the field's column.
+	current := activeTabStyle.Render(truncate(f.value(), fieldWidth-2))
+	return fmt.Sprintf("%-*s", fieldWidth, current)
+}
 
 // collapsed hands a long choice row to the picker (ADR-0024).
-func (f field) collapsed() bool { return len(f.spec.Choices) > inlineChoiceLimit }
+func (f *choiceField) collapsed() bool {
+	return len(f.spec.Choices) > inlineChoiceLimit
+}
+
+func (f *choiceField) inline() string {
+	rendered := make([]string, 0, len(f.spec.Choices))
+	for i, choice := range f.spec.Choices {
+		style := inactiveTabStyle
+		if i == f.choice {
+			style = activeTabStyle
+		}
+		rendered = append(rendered, style.Render(choice))
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, rendered...)
+}
 
 // form is mutable open state, always held as a *form and mutated in place. Tab
 // models are values that bubbletea replaces on every key, so a form copied
@@ -73,30 +203,11 @@ type chord struct {
 func newForm(title string, specs []fieldSpec) *form {
 	fields := make([]field, 0, len(specs))
 	for _, spec := range specs {
-		fields = append(fields, newField(spec))
+		fields = append(fields, spec.newField())
 	}
 
 	f := &form{title: title, fields: fields}
 	f.applyFocus()
-	return f
-}
-
-func newField(spec fieldSpec) field {
-	f := field{spec: spec}
-	if !f.isChoice() {
-		in := textinput.New()
-		in.Placeholder = spec.Placeholder
-		in.SetValue(spec.Prefill)
-		in.CharLimit = fieldCharLimit
-		in.Width = fieldWidth
-		f.input = in
-		return f
-	}
-	for i, choice := range spec.Choices {
-		if choice == spec.Choice {
-			f.choice = i
-		}
-	}
 	return f
 }
 
@@ -105,7 +216,7 @@ func newField(spec fieldSpec) field {
 // many rows there are; the form still owns focus and layout.
 func (f *form) Append(specs ...fieldSpec) {
 	for _, spec := range specs {
-		f.fields = append(f.fields, newField(spec))
+		f.fields = append(f.fields, spec.newField())
 	}
 	f.applyFocus()
 }
@@ -118,14 +229,7 @@ func (f *form) DropLast(count int) {
 
 func (f *form) applyFocus() {
 	for i := range f.fields {
-		if f.fields[i].isChoice() {
-			continue
-		}
-		if f.focus == i {
-			f.fields[i].input.Focus()
-		} else {
-			f.fields[i].input.Blur()
-		}
+		f.fields[i].setFocus(f.focus == i)
 	}
 }
 
@@ -146,16 +250,26 @@ func (f *form) reserves(key string) bool {
 	return false
 }
 
+func (f *form) focused() field { return f.fields[f.focus] }
+
+func (f *form) focusedChoice() (*choiceField, bool) {
+	fld, ok := f.focused().(*choiceField)
+	return fld, ok
+}
+
 func (f *form) openPicker() {
-	fld := f.fields[f.focus]
-	f.pick = newPicker(fld.spec.Label, fld.spec.Choices, fld.choice)
+	fld, ok := f.focusedChoice()
+	if !ok {
+		return
+	}
+	f.pick = newPicker(fld.label(), fld.spec.Choices, fld.choice)
 }
 
 func (f *form) updatePicker(msg tea.KeyMsg) {
 	open, choice, picked := f.pick.Answer(msg)
 	f.pick = open
-	if picked {
-		f.fields[f.focus].choice = choice
+	if fld, ok := f.focusedChoice(); ok && picked {
+		fld.choice = choice
 	}
 }
 
@@ -173,7 +287,8 @@ func (f *form) Update(msg tea.KeyMsg) (tea.Cmd, bool) {
 	case KeyEsc:
 		return nil, false
 	case KeyEnter:
-		if !f.fields[f.focus].collapsed() {
+		fld, ok := f.focusedChoice()
+		if !ok || !fld.collapsed() {
 			return nil, false
 		}
 		f.openPicker()
@@ -186,46 +301,19 @@ func (f *form) Update(msg tea.KeyMsg) (tea.Cmd, bool) {
 		f.focus = wrap(f.focus, -1, len(f.fields))
 		f.applyFocus()
 		return nil, true
-	case KeyLeft, KeyH:
-		if f.fields[f.focus].isChoice() {
-			f.cycle(-1)
-			return nil, true
-		}
-	case KeyRight, KeyL:
-		if f.fields[f.focus].isChoice() {
-			f.cycle(1)
-			return nil, true
-		}
 	}
 
 	if f.reserves(msg.String()) {
 		return nil, false
 	}
-	if f.fields[f.focus].isChoice() {
-		return nil, true
-	}
-
-	before := f.fields[f.focus].input.Value()
-	var cmd tea.Cmd
-	f.fields[f.focus].input, cmd = f.fields[f.focus].input.Update(msg)
-	f.fields[f.focus].touched = f.fields[f.focus].touched || f.fields[f.focus].input.Value() != before
-	return cmd, true
-}
-
-func (f *form) cycle(step int) {
-	current := &f.fields[f.focus]
-	current.choice = wrap(current.choice, step, len(current.spec.Choices))
+	return f.focused().update(msg)
 }
 
 func (f *form) Value(key string) string {
 	for _, fld := range f.fields {
-		if fld.spec.Key != key {
-			continue
+		if fld.key() == key {
+			return fld.value()
 		}
-		if fld.isChoice() {
-			return fld.spec.Choices[fld.choice]
-		}
-		return fld.input.Value()
 	}
 	return ""
 }
@@ -233,12 +321,10 @@ func (f *form) Value(key string) string {
 // Prefill writes a derived value into a field the operator has not typed into,
 // so a changed quantity moves an estimate but never overwrites an actual.
 func (f *form) Prefill(key, value string) {
-	for i := range f.fields {
-		if f.fields[i].spec.Key == key && !f.fields[i].isChoice() && !f.fields[i].touched {
-			f.fields[i].input.SetValue(value)
-			// SetValue only clamps the cursor, so without this a backspace
-			// deletes from wherever the last, shorter, prefill ended.
-			f.fields[i].input.CursorEnd()
+	for _, fld := range f.fields {
+		text, ok := fld.(*textField)
+		if ok && text.key() == key {
+			text.prefill(value)
 		}
 	}
 }
@@ -247,8 +333,9 @@ func (f *form) Prefill(key, value string) {
 // that read the same still name different records.
 func (f *form) ChoiceIndex(key string) int {
 	for _, fld := range f.fields {
-		if fld.spec.Key == key {
-			return fld.choice
+		choice, ok := fld.(*choiceField)
+		if ok && choice.key() == key {
+			return choice.choice
 		}
 	}
 	return -1
@@ -276,7 +363,7 @@ func (f *form) Help() string {
 
 func (f *form) hasChoiceField() bool {
 	for _, fld := range f.fields {
-		if fld.isChoice() {
+		if _, ok := fld.(*choiceField); ok {
 			return true
 		}
 	}
@@ -285,7 +372,7 @@ func (f *form) hasChoiceField() bool {
 
 func (f *form) hasCollapsedField() bool {
 	for _, fld := range f.fields {
-		if fld.collapsed() {
+		if choice, ok := fld.(*choiceField); ok && choice.collapsed() {
 			return true
 		}
 	}
@@ -311,30 +398,9 @@ func (f *form) row(index int, fld field) string {
 	if f.focus == index {
 		style = focusedLabelStyle
 	}
-	line := style.Render(fld.spec.Label) + f.control(fld)
-	if msg := f.errs.For(fld.spec.Key); msg != "" {
+	line := style.Render(fld.label()) + fld.control()
+	if msg := f.errs.For(fld.key()); msg != "" {
 		line += "  " + errorStyle.Render("← "+msg)
 	}
 	return line + "\n"
-}
-
-func (f *form) control(fld field) string {
-	if !fld.isChoice() {
-		return fld.input.View()
-	}
-	if fld.collapsed() {
-		// Less the two columns activeTabStyle pads with, so a long label still
-		// ends inside the field's column.
-		current := activeTabStyle.Render(truncate(fld.spec.Choices[fld.choice], fieldWidth-2))
-		return fmt.Sprintf("%-*s", fieldWidth, current)
-	}
-	rendered := make([]string, 0, len(fld.spec.Choices))
-	for i, choice := range fld.spec.Choices {
-		style := inactiveTabStyle
-		if i == fld.choice {
-			style = activeTabStyle
-		}
-		rendered = append(rendered, style.Render(choice))
-	}
-	return fmt.Sprintf("%-*s", fieldWidth, lipgloss.JoinHorizontal(lipgloss.Top, rendered...))
 }

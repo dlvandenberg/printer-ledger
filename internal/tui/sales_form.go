@@ -13,17 +13,17 @@ import (
 // rather than prefilled (ADR-0016).
 func newSaleForm(prints []app.SellablePrintView) *form {
 	return newForm("Record sale", []fieldSpec{
-		{Key: domain.FieldSalePrint, Label: "Print", Choices: printLabels(prints)},
-		{Key: domain.FieldSalePrice, Label: "Price", Placeholder: "4.00"},
-		{Key: domain.FieldSaleDate, Label: dateLabel, Placeholder: unit.DateLayout, Prefill: unit.FormatDate(unit.Today())},
+		choiceSpec{Key: domain.FieldSalePrint, Label: "Print", Choices: printLabels(prints)},
+		textSpec{Key: domain.FieldSalePrice, Label: "Price", Placeholder: "4.00"},
+		textSpec{Key: domain.FieldSaleDate, Label: dateLabel, Placeholder: unit.DateLayout, Prefill: unit.FormatDate(unit.Today())},
 	})
 }
 
 func newEditSaleForm(prints []app.SellablePrintView, sale app.SaleView) *form {
 	return newForm("Edit sale", []fieldSpec{
-		{Key: domain.FieldSalePrint, Label: "Print", Choices: printLabels(prints), Choice: printLabelOf(prints, sale.PrintID)},
-		{Key: domain.FieldSalePrice, Label: "Price", Prefill: unit.FormatCents(sale.Price)},
-		{Key: domain.FieldSaleDate, Label: dateLabel, Placeholder: unit.DateLayout, Prefill: unit.FormatDate(sale.Date)},
+		choiceSpec{Key: domain.FieldSalePrint, Label: "Print", Choices: printLabels(prints), Choice: printLabelOf(prints, sale.PrintID)},
+		textSpec{Key: domain.FieldSalePrice, Label: "Price", Prefill: unit.FormatCents(sale.Price)},
+		textSpec{Key: domain.FieldSaleDate, Label: dateLabel, Placeholder: unit.DateLayout, Prefill: unit.FormatDate(sale.Date)},
 	})
 }
 

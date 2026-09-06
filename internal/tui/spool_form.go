@@ -8,13 +8,13 @@ import (
 
 func newSpoolForm() *form {
 	return newForm("Add spool", []fieldSpec{
-		{Key: domain.FieldFilamentType, Label: "Filament type", Choices: domain.FilamentTypeNames()},
-		{Key: domain.FieldBrand, Label: "Brand", Placeholder: "Bambu"},
-		{Key: domain.FieldColor, Label: "Colour", Placeholder: "Black"},
-		{Key: domain.FieldInitialGrams, Label: "Filament grams", Placeholder: "1000"},
-		{Key: domain.FieldTareGrams, Label: "Empty spool grams", Placeholder: "210"},
-		{Key: domain.FieldPurchaseCost, Label: "Purchase price in EUR", Placeholder: "22.00"},
-		{
+		choiceSpec{Key: domain.FieldFilamentType, Label: "Filament type", Choices: domain.FilamentTypeNames()},
+		textSpec{Key: domain.FieldBrand, Label: "Brand", Placeholder: "Bambu"},
+		textSpec{Key: domain.FieldColor, Label: "Colour", Placeholder: "Black"},
+		textSpec{Key: domain.FieldInitialGrams, Label: "Filament grams", Placeholder: "1000"},
+		textSpec{Key: domain.FieldTareGrams, Label: "Empty spool grams", Placeholder: "210"},
+		textSpec{Key: domain.FieldPurchaseCost, Label: "Purchase price in EUR", Placeholder: "22.00"},
+		textSpec{
 			Key:         domain.FieldPurchaseDate,
 			Label:       "Purchase date",
 			Placeholder: unit.DateLayout,
@@ -37,14 +37,14 @@ func addSpoolCmd(f *form) app.AddSpoolCmd {
 
 func newReweighForm() *form {
 	return newForm("Re-weigh spool", []fieldSpec{
-		{Key: domain.FieldMeasuredGrams, Label: "Weight on the scale", Placeholder: "610"},
-		{
+		textSpec{Key: domain.FieldMeasuredGrams, Label: "Weight on the scale", Placeholder: "610"},
+		textSpec{
 			Key:         domain.FieldAdjustedOn,
 			Label:       dateLabel,
 			Placeholder: unit.DateLayout,
 			Prefill:     unit.FormatDate(unit.Today()),
 		},
-		{Key: domain.FieldNote, Label: "Note", Placeholder: "purge tower"},
+		textSpec{Key: domain.FieldNote, Label: "Note", Placeholder: "purge tower"},
 	})
 }
 

@@ -12,10 +12,10 @@ const usageFieldsPerRow = 2
 
 func newPrintForm(designs []app.DesignView, spools []app.SpoolView, draft app.PrintDraftView) *form {
 	specs := []fieldSpec{
-		{Key: domain.FieldDesignID, Label: "Design", Choices: designNames(designs)},
-		{Key: domain.FieldQuantity, Label: "Copies", Placeholder: "1", Prefill: unit.FormatCopies(draft.Quantity)},
-		{Key: domain.FieldPrintDate, Label: dateLabel, Placeholder: unit.DateLayout, Prefill: unit.FormatDate(unit.Today())},
-		{Key: domain.FieldMinutes, Label: "Actual time", Placeholder: "5:30", Prefill: unit.FormatHHmm(draft.Minutes)},
+		choiceSpec{Key: domain.FieldDesignID, Label: "Design", Choices: designNames(designs)},
+		textSpec{Key: domain.FieldQuantity, Label: "Copies", Placeholder: "1", Prefill: unit.FormatCopies(draft.Quantity)},
+		textSpec{Key: domain.FieldPrintDate, Label: dateLabel, Placeholder: unit.DateLayout, Prefill: unit.FormatDate(unit.Today())},
+		textSpec{Key: domain.FieldMinutes, Label: "Actual time", Placeholder: "5:30", Prefill: unit.FormatHHmm(draft.Minutes)},
 	}
 	specs = append(specs, stockRowSpecs("", "", "")...)
 	return newForm("Record print", append(specs, usageRowSpecs(0, spools, unit.FormatGrams(draft.Grams), "")...))
@@ -25,10 +25,10 @@ func newPrintForm(designs []app.DesignView, spools []app.SpoolView, draft app.Pr
 // Usage rows it opened with, since the tab owns how many rows there are.
 func newEditPrintForm(designs []app.DesignView, spools []app.SpoolView, print app.PrintView) (*form, int) {
 	specs := []fieldSpec{
-		{Key: domain.FieldDesignID, Label: "Design", Choices: designNames(designs), Choice: print.DesignName},
-		{Key: domain.FieldQuantity, Label: "Copies", Prefill: unit.FormatCopies(print.Quantity)},
-		{Key: domain.FieldPrintDate, Label: dateLabel, Placeholder: unit.DateLayout, Prefill: unit.FormatDate(print.Date)},
-		{Key: domain.FieldMinutes, Label: "Actual time", Placeholder: "5:30", Prefill: unit.FormatHHmm(print.Minutes)},
+		choiceSpec{Key: domain.FieldDesignID, Label: "Design", Choices: designNames(designs), Choice: print.DesignName},
+		textSpec{Key: domain.FieldQuantity, Label: "Copies", Prefill: unit.FormatCopies(print.Quantity)},
+		textSpec{Key: domain.FieldPrintDate, Label: dateLabel, Placeholder: unit.DateLayout, Prefill: unit.FormatDate(print.Date)},
+		textSpec{Key: domain.FieldMinutes, Label: "Actual time", Placeholder: "5:30", Prefill: unit.FormatHHmm(print.Minutes)},
 	}
 	specs = append(specs, stockRowSpecs(
 		unit.FormatCopies(print.GiftedCount),
@@ -46,9 +46,9 @@ func newEditPrintForm(designs []app.DesignView, spools []app.SpoolView, print ap
 // that all came off well needs no typing.
 func stockRowSpecs(gifted, kept, scrapped string) []fieldSpec {
 	return []fieldSpec{
-		{Key: domain.FieldGifted, Label: "Gifted copies", Placeholder: "0", Prefill: gifted},
-		{Key: domain.FieldKept, Label: "Kept copies", Placeholder: "0", Prefill: kept},
-		{Key: domain.FieldScrapped, Label: "Scrapped copies", Placeholder: "0", Prefill: scrapped},
+		textSpec{Key: domain.FieldGifted, Label: "Gifted copies", Placeholder: "0", Prefill: gifted},
+		textSpec{Key: domain.FieldKept, Label: "Kept copies", Placeholder: "0", Prefill: kept},
+		textSpec{Key: domain.FieldScrapped, Label: "Scrapped copies", Placeholder: "0", Prefill: scrapped},
 	}
 }
 
@@ -63,8 +63,8 @@ func usageRowSpecs(row int, spools []app.SpoolView, grams, spool string) []field
 		placeholder = ""
 	}
 	return []fieldSpec{
-		{Key: domain.FieldUsageGrams(row), Label: gramsLabel, Placeholder: placeholder, Prefill: grams},
-		{Key: domain.FieldUsageSpool(row), Label: spoolLabel, Choices: spoolLabels(spools), Choice: spool},
+		textSpec{Key: domain.FieldUsageGrams(row), Label: gramsLabel, Placeholder: placeholder, Prefill: grams},
+		choiceSpec{Key: domain.FieldUsageSpool(row), Label: spoolLabel, Choices: spoolLabels(spools), Choice: spool},
 	}
 }
 
