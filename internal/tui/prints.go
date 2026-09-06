@@ -16,7 +16,7 @@ import (
 // One format per table, shared by its header and its rows, so the two cannot
 // drift out of alignment.
 const (
-	printRow      = "%s%-10s  %-16s  %6s  %6s  %-9s  %6s  %10s  %10s\n"
+	printRow      = "%s%-10s  %-16s  %6s  %6s  %-9s  %7s  %10s  %10s\n"
 	printCostLine = "  %-10s  %s\n"
 )
 

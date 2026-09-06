@@ -13,6 +13,12 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
+const (
+	brandLength = 10
+	colorLength = 16
+	spoolsRow   = "%s%-6s  %-10s  %-16s  %10s  %10s  %-7s\n" // Type, Brand, Color, Remaining, Value, State
+)
+
 var _ tabModel = spoolsModel{}
 
 type spoolsModel struct {
@@ -184,15 +190,15 @@ func (m spoolsModel) View() string {
 		return b.String()
 	}
 
-	fmt.Fprintf(&b, "  %-6s  %-14s  %-12s  %10s  %10s  %-7s\n",
+	fmt.Fprintf(&b, spoolsRow, "  ",
 		"TYPE", "BRAND", "COLOUR", "REMAINING", "VALUE", "STATE")
 	for i, row := range m.rows {
 		marker := "  "
 		if i == m.cursor {
 			marker = "> "
 		}
-		fmt.Fprintf(&b, "%s%-6s  %-14s  %-12s  %10s  %10s  %-7s\n",
-			marker, row.FilamentType, truncate(row.Brand, 14), truncate(row.Color, 12),
+		fmt.Fprintf(&b, spoolsRow,
+			marker, row.FilamentType, truncate(row.Brand, brandLength), truncate(row.Color, colorLength),
 			unit.FormatGrams(row.RemainingGrams),
 			currency+unit.FormatCents(row.RemainingValue),
 			row.State)

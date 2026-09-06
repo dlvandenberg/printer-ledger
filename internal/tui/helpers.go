@@ -50,3 +50,5 @@ func dropLastRune(s string) string {
 	}
 	return string(r[:len(r)-1])
 }
+
+func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }

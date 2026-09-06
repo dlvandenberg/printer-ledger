@@ -4,12 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
+)
+
+const (
+	designRow = "%s%-16s  %-12s  %-16s  %-15s  %-7s  %6s\n"
 )
 
 var _ tabModel = designsModel{}
@@ -82,7 +87,7 @@ func (m designsModel) View() string {
 		return b.String()
 	}
 
-	fmt.Fprintf(&b, "  %-16s  %12s  %16s  %15s  %-7s  %6s\n",
+	fmt.Fprintf(&b, designRow, "  ",
 		"NAME", "DEFAULT TYPE", "ESTIMATED GRAMS", "ESTIMATED TIME", "MARGIN", "PRINTS")
 
 	for i, row := range m.rows {
@@ -90,8 +95,8 @@ func (m designsModel) View() string {
 		if i == m.cursor {
 			marker = "> "
 		}
-		fmt.Fprintf(&b, "%s%-16s  %-12s  %-16s  %-15s  %-7s  %6d\n",
-			marker, truncate(row.Name, 16), row.DefaultFilamentType, unit.FormatGrams(row.EstimatedGrams), unit.FormatMinutes(row.EstimatedMinutes), unit.FormatPercent(row.MarginPct), row.PrintCount)
+		fmt.Fprintf(&b, designRow,
+			marker, truncate(row.Name, 16), row.DefaultFilamentType, unit.FormatGrams(row.EstimatedGrams), unit.FormatMinutes(row.EstimatedMinutes), unit.FormatPercent(row.MarginPct), strconv.FormatInt(row.PrintCount, 10))
 	}
 
 	if m.confirm != nil {

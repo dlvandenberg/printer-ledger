@@ -24,8 +24,6 @@ var (
 	placeholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).PaddingTop(1)
 )
 
-func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }
-
 type Model struct {
 	tabs   []namedTab
 	active int
