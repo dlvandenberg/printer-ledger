@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	inlineChoiceLimit = 4
+	inlineChoiceWidth = 48
 	pickerWindow      = 10
 )
 

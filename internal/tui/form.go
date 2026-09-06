@@ -158,14 +158,15 @@ func (f *choiceField) control() string {
 		return fmt.Sprintf("%-*s", fieldWidth, f.inline())
 	}
 	// Less the two columns activeTabStyle pads with, so a long label still
-	// ends inside the field's column.
-	current := activeTabStyle.Render(truncate(f.value(), fieldWidth-2))
+	// ends inside the budget an inline row would have had.
+	current := activeTabStyle.Render(truncate(f.value(), inlineChoiceWidth-2))
 	return fmt.Sprintf("%-*s", fieldWidth, current)
 }
 
-// collapsed hands a long choice row to the picker (ADR-0024).
+// collapsed hands the picker a choice row too wide to sit on one line
+// (ADR-0024). Two Spool labels already are.
 func (f *choiceField) collapsed() bool {
-	return len(f.spec.Choices) > inlineChoiceLimit
+	return lipgloss.Width(f.inline()) > inlineChoiceWidth
 }
 
 func (f *choiceField) inline() string {
