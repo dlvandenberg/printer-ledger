@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/dlvandenberg/printer-ledger/internal/app"
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
@@ -30,6 +32,15 @@ func material(m app.MaterialView) string {
 		shown = slices.Clone(shown[:materialColorLimit])
 	}
 	return string(m.FilamentType) + " " + strings.Join(shown, "+")
+}
+
+// pad fills a styled string out to a column. A width verb would count the
+// escape bytes instead and leave the string as it found it.
+func pad(s string, width int) string {
+	if gap := width - lipgloss.Width(s); gap > 0 {
+		return s + strings.Repeat(" ", gap)
+	}
+	return s
 }
 
 func truncate(s string, width int) string {

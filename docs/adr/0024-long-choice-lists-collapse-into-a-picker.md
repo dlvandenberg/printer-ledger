@@ -17,19 +17,25 @@ terminal — long before any count of them looks large.
 
 ## Decision
 
-A choice row whose options do not fit on one line renders **collapsed** — the current choice
-alone, truncated to that same budget — and `enter` opens a **picker** over the form: a title, a filter
-line, a `n of m` count, and a ten-row window of matches. Filtering is a case-insensitive substring
-match against the whole rendered label, so `petg` narrows a Spool list by type and `black` by
-colour without the picker knowing what a Spool is. `up`/`down` and `ctrl+p`/`ctrl+n` move,
-`enter` commits, `esc` closes keeping the previous choice. Options that fit keep the inline row; a
-collapsed row still cycles with `left`/`right`.
+A choice row whose options do not fit the width a row is allowed renders **collapsed** — the
+current choice alone, truncated to that same width — and `enter` opens a **picker** over the form:
+a title, a filter line, a `n of m` count, and a ten-row window of matches. Filtering is a
+case-insensitive substring match against the whole rendered label, so `petg` narrows a Spool list
+by type and `black` by colour without the picker knowing what a Spool is. `up`/`down` and
+`ctrl+p`/`ctrl+n` move, `enter` commits, `esc` closes keeping the previous choice. Options that fit
+keep the inline row; a collapsed row still cycles with `left`/`right`.
 
-The budget is the rendered width of the options side by side, measured at runtime rather than
+What is measured at runtime is the options: their rendered width side by side, rather than a count
 declared per field, so a ledger with two Designs behaves as it always did and grows into the picker
-on its own. A count threshold was the first rule tried and it measures the wrong thing: it leaves
-two Spool labels — 52 columns — on one inline row, and collapses five Designs named `Vase` and
-`Cat` that had room to spare.
+on its own. What they are measured against is fixed — twice the column a text row is given, 48
+terminal columns — and does not follow the terminal. The form is a fixed-column layout already: a
+label column and a field column, both constants. A budget read from the terminal would make whether
+a row collapses depend on how the window was dragged, and the form has no width to read anyway,
+since nothing propagates `WindowSizeMsg` past the top-level model.
+
+A count threshold was the first rule tried and it measures the wrong thing: it leaves two Spool
+labels — 52 columns — on one inline row, and collapses five Designs named `Vase` and `Cat` that had
+room to spare.
 
 The picker lives in `internal/tui` alongside the form, and commits an index into the Choices it
 was opened on — the same index `ChoiceIndex` already returns, so two rows that read the same still
@@ -43,8 +49,8 @@ An inline scrolling list — the field expanding into a windowed list in place �
 state, but the rows below it move every time focus lands on a choice and there is still nowhere to
 type a filter. A `Searchable` flag on the spec is explicit, but it is a decision every call site
 must remember and none can get right, since both the length of a list and the length of its labels
-are data, not code. Filtering the Print
-form's Spool list to Capable Spools would cut the list at the source, but Capable is defined
+are data, not code. Filtering the Print form's Spool list to Capable Spools would cut the list at
+the source, but Capable is defined
 against a Design's full estimate (ADR-0015) and a swap row may need only 40g, so it would hide
 Spools that are genuinely usable.
 

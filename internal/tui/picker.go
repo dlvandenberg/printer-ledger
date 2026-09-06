@@ -7,10 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const (
-	inlineChoiceWidth = 48
-	pickerWindow      = 10
-)
+const pickerWindow = 10
 
 // picker is the open filter over one choice field (ADR-0024). It keeps no
 // selection of its own beyond a cursor: what it commits is an index into the

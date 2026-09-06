@@ -17,6 +17,11 @@ const (
 	labelWidth     = 24
 	fieldWidth     = 24
 	fieldCharLimit = 32
+
+	// A choice row may spread over twice the column a text row gets before it
+	// is worth collapsing (ADR-0024): the options are the row's whole content,
+	// where a text row's column is only where its answer is typed.
+	inlineChoiceWidth = 2 * fieldWidth
 )
 
 var (
@@ -155,12 +160,12 @@ func (f *textField) control() string { return f.input.View() }
 
 func (f *choiceField) control() string {
 	if !f.collapsed() {
-		return fmt.Sprintf("%-*s", fieldWidth, f.inline())
+		return pad(f.inline(), fieldWidth)
 	}
 	// Less the two columns activeTabStyle pads with, so a long label still
 	// ends inside the budget an inline row would have had.
 	current := activeTabStyle.Render(truncate(f.value(), inlineChoiceWidth-2))
-	return fmt.Sprintf("%-*s", fieldWidth, current)
+	return pad(current, fieldWidth)
 }
 
 // collapsed hands the picker a choice row too wide to sit on one line
@@ -319,8 +324,6 @@ func (f *form) Value(key string) string {
 	return ""
 }
 
-// Prefill writes a derived value into a field the operator has not typed into,
-// so a changed quantity moves an estimate but never overwrites an actual.
 func (f *form) Prefill(key, value string) {
 	for _, fld := range f.fields {
 		text, ok := fld.(*textField)
