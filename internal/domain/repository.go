@@ -17,10 +17,16 @@ type SpoolRepository interface {
 	SpoolAdjustments(ctx context.Context, spoolID int64) ([]SpoolAdjustment, error)
 }
 
+// DesignRepository answers a read in two shapes. The ledger carries the print
+// count, and is what a list the operator reads, an invariant and a delete guard
+// ask for. The plain read carries the aggregate and nothing derived, so a caller
+// that only needs a name cannot hold a second opinion on that count.
 type DesignRepository interface {
 	CreateDesign(ctx context.Context, d Design) (Design, error)
 	UpdateDesign(ctx context.Context, d Design) (Design, error)
 	DeleteDesign(ctx context.Context, id int64) error
+	Designs(ctx context.Context) ([]Design, error)
+	Design(ctx context.Context, id int64) (Design, error)
 	DesignLedgers(ctx context.Context) ([]DesignLedger, error)
 	DesignLedger(ctx context.Context, id int64) (DesignLedger, error)
 }

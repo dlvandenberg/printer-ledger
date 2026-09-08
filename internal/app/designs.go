@@ -233,36 +233,10 @@ func toDesignQuoteView(l domain.DesignLedger, q domain.DesignQuote) DesignQuoteV
 	}
 }
 
-// designOf, designsByID and designList read the aggregate out of the ledger for
-// the callers that only need a Design's identity.
-func designOf(ctx context.Context, db domain.Database, id int64) (domain.Design, error) {
-	ledger, err := db.DesignLedger(ctx, id)
-	if err != nil {
-		return domain.Design{}, err
-	}
-	return ledger.Design, nil
-}
-
-func designsByID(ctx context.Context, db domain.Database) (map[int64]domain.Design, error) {
-	designs, err := designList(ctx, db)
-	if err != nil {
-		return nil, err
-	}
+func designsByID(designs []domain.Design) map[int64]domain.Design {
 	byID := make(map[int64]domain.Design, len(designs))
 	for _, design := range designs {
 		byID[design.ID] = design
 	}
-	return byID, nil
-}
-
-func designList(ctx context.Context, db domain.Database) ([]domain.Design, error) {
-	ledgers, err := db.DesignLedgers(ctx)
-	if err != nil {
-		return nil, err
-	}
-	designs := make([]domain.Design, 0, len(ledgers))
-	for _, ledger := range ledgers {
-		designs = append(designs, ledger.Design)
-	}
-	return designs, nil
+	return byID
 }
