@@ -158,10 +158,11 @@ func (a *App) ListSales(ctx context.Context) ([]SaleView, error) {
 	if err != nil {
 		return nil, err
 	}
-	byDesign, err := designsByID(ctx, a.db)
+	designs, err := a.db.Designs(ctx)
 	if err != nil {
 		return nil, err
 	}
+	byDesign := designsByID(designs)
 	spools, err := a.db.SpoolLedgers(ctx)
 	if err != nil {
 		return nil, err
@@ -206,10 +207,11 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 	if err != nil {
 		return nil, err
 	}
-	byID, err := designsByID(ctx, a.db)
+	designs, err := a.db.Designs(ctx)
 	if err != nil {
 		return nil, err
 	}
+	byID := designsByID(designs)
 	spools, err := a.db.SpoolLedgers(ctx)
 	if err != nil {
 		return nil, err
@@ -217,7 +219,7 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 
 	suggested := map[int64]unit.Cents{}
 	hasSuggested := map[int64]bool{}
-	for _, design := range byID {
+	for _, design := range designs {
 		price, ok := domain.NewDesignQuote(design, settings, spools).SuggestedPrice()
 		suggested[design.ID], hasSuggested[design.ID] = price, ok
 	}
@@ -261,7 +263,7 @@ func (a *App) PreviewSale(ctx context.Context, cmd RecordSaleCmd) (SalePreviewVi
 	if err != nil {
 		return SalePreviewView{}, err
 	}
-	design, err := designOf(ctx, a.db, ledger.Print.DesignID)
+	design, err := a.db.Design(ctx, ledger.Print.DesignID)
 	if err != nil {
 		return SalePreviewView{}, err
 	}
@@ -332,7 +334,7 @@ func readSaleView(ctx context.Context, tx domain.Database, sale domain.Sale) (Sa
 	if err != nil {
 		return SaleView{}, err
 	}
-	design, err := designOf(ctx, tx, ledger.Print.DesignID)
+	design, err := tx.Design(ctx, ledger.Print.DesignID)
 	if err != nil {
 		return SaleView{}, err
 	}

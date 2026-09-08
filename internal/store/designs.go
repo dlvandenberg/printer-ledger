@@ -9,11 +9,18 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 )
 
+const designQuery = `
+SELECT d.id, d.name, d.default_filament_type, d.estimated_centigrams, d.estimated_minutes,
+       d.margin_hundredths
+FROM designs d`
+
 const designLedgerQuery = `
 SELECT d.id, d.name, d.default_filament_type, d.estimated_centigrams, d.estimated_minutes,
        d.margin_hundredths,
        (SELECT COUNT(*) FROM prints p WHERE p.design_id = d.id) AS print_count
 FROM designs d`
+
+const designOrder = ` ORDER BY d.name COLLATE NOCASE, d.id`
 
 var _ domain.DesignRepository = &Store{}
 
@@ -74,6 +81,40 @@ func (s *Store) DeleteDesign(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (s *Store) Design(ctx context.Context, id int64) (domain.Design, error) {
+	row := s.q().QueryRowContext(ctx, designQuery+` WHERE d.id = ?`, id)
+	design, err := scanDesign(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.Design{}, fmt.Errorf("design %d: %w", id, domain.ErrNotFound)
+	}
+	if err != nil {
+		return domain.Design{}, fmt.Errorf("design %d: %w", id, err)
+	}
+	return design, nil
+}
+
+func (s *Store) Designs(ctx context.Context) ([]domain.Design, error) {
+	rows, err := s.q().QueryContext(ctx, designQuery+designOrder)
+	if err != nil {
+		return nil, fmt.Errorf("list designs: %w", err)
+	}
+	//nolint:errcheck
+	defer rows.Close()
+
+	var designs []domain.Design
+	for rows.Next() {
+		design, err := scanDesign(rows)
+		if err != nil {
+			return nil, fmt.Errorf("list designs: %w", err)
+		}
+		designs = append(designs, design)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list designs: %w", err)
+	}
+	return designs, nil
+}
+
 func (s *Store) DesignLedger(ctx context.Context, id int64) (domain.DesignLedger, error) {
 	row := s.q().QueryRowContext(ctx, designLedgerQuery+` WHERE d.id = ?`, id)
 	ledger, err := scanDesignLedger(row)
@@ -87,7 +128,7 @@ func (s *Store) DesignLedger(ctx context.Context, id int64) (domain.DesignLedger
 }
 
 func (s *Store) DesignLedgers(ctx context.Context) ([]domain.DesignLedger, error) {
-	rows, err := s.q().QueryContext(ctx, designLedgerQuery+` ORDER BY d.name COLLATE NOCASE, d.id`)
+	rows, err := s.q().QueryContext(ctx, designLedgerQuery+designOrder)
 	if err != nil {
 		return nil, fmt.Errorf("list designs: %w", err)
 	}
@@ -106,6 +147,20 @@ func (s *Store) DesignLedgers(ctx context.Context) ([]domain.DesignLedger, error
 		return nil, fmt.Errorf("list designs: %w", err)
 	}
 	return ledgers, nil
+}
+
+func scanDesign(row scanner) (domain.Design, error) {
+	var (
+		design       domain.Design
+		filamentType string
+	)
+	err := row.Scan(&design.ID, &design.Name, &filamentType, &design.EstimatedGrams,
+		&design.EstimatedMinutes, &design.MarginPct)
+	if err != nil {
+		return domain.Design{}, err
+	}
+	design.DefaultFilamentType = domain.FilamentType(filamentType)
+	return design, nil
 }
 
 func scanDesignLedger(row scanner) (domain.DesignLedger, error) {

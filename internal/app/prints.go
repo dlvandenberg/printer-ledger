@@ -91,7 +91,7 @@ type PrintDraftView struct {
 func (a *App) RecordPrint(ctx context.Context, cmd RecordPrintCmd) (PrintView, error) {
 	var view PrintView
 	err := a.db.InTx(ctx, func(tx domain.Database) error {
-		if _, err := designOf(ctx, tx, cmd.DesignID); err != nil {
+		if _, err := tx.Design(ctx, cmd.DesignID); err != nil {
 			return err
 		}
 		settings, err := tx.Settings(ctx)
@@ -131,7 +131,7 @@ func (a *App) EditPrint(ctx context.Context, cmd EditPrintCmd) (PrintView, error
 		if err != nil {
 			return err
 		}
-		if _, err := designOf(ctx, tx, cmd.DesignID); err != nil {
+		if _, err := tx.Design(ctx, cmd.DesignID); err != nil {
 			return err
 		}
 		ledgers, err := tx.SpoolLedgers(ctx)
@@ -174,10 +174,11 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 	if err != nil {
 		return nil, err
 	}
-	designs, err := designsByID(ctx, a.db)
+	designs, err := a.db.Designs(ctx)
 	if err != nil {
 		return nil, err
 	}
+	byDesign := designsByID(designs)
 	spools, err := a.db.SpoolLedgers(ctx)
 	if err != nil {
 		return nil, err
@@ -185,7 +186,7 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 
 	views := make([]PrintView, 0, len(ledgers))
 	for _, ledger := range ledgers {
-		views = append(views, toPrintView(ledger, designs[ledger.Print.DesignID], spools))
+		views = append(views, toPrintView(ledger, byDesign[ledger.Print.DesignID], spools))
 	}
 	return views, nil
 }
@@ -195,7 +196,7 @@ func (a *App) PrintDetail(ctx context.Context, id int64) (PrintView, error) {
 }
 
 func (a *App) PrintDraft(ctx context.Context, designID int64, quantity string) (PrintDraftView, error) {
-	design, err := designOf(ctx, a.db, designID)
+	design, err := a.db.Design(ctx, designID)
 	if err != nil {
 		return PrintDraftView{}, err
 	}
@@ -311,7 +312,7 @@ func printViewOf(ctx context.Context, db domain.Database, id int64) (PrintView, 
 	if err != nil {
 		return PrintView{}, err
 	}
-	design, err := designOf(ctx, db, ledger.Print.DesignID)
+	design, err := db.Design(ctx, ledger.Print.DesignID)
 	if err != nil {
 		return PrintView{}, err
 	}
