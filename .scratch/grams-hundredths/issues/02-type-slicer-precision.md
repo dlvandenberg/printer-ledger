@@ -30,7 +30,7 @@ too small to print, and any floor above zero would be a number with nothing to d
 
 **Blocked by:** 01 (Grams are stored as hundredths of a gram)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] `85.59` is accepted for a design estimate, a spool's initial and tare weight, a reweigh and a
       usage row, and the value that comes back is 85.59g

@@ -6,7 +6,7 @@ Zero stays a legal parse: gifted, kept and scrapped are genuinely `0` on most pr
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] `unit.Copies` has an `int64` underlying type; parsing and formatting go through the 64-bit `strconv` calls, not `Atoi`/`Itoa`
 - [x] A copy count above the 32-bit range parses and formats back to the same text

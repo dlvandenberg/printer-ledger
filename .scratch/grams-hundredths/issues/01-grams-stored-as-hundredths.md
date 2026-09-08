@@ -29,7 +29,7 @@ so it is recreated.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] `unit.Grams` counts hundredths of a gram, with a named scale constant beside the type
 - [x] Parsing `"1000"` yields one thousand grams and formatting it returns `1000g`; a fractional

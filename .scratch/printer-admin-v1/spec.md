@@ -1,6 +1,6 @@
 # Spec: printer-admin v1
 
-Status: ready-for-agent
+Status: resolved
 
 ## Problem Statement
 
@@ -9,7 +9,7 @@ I sell 3D prints locally as a side business, and I have no idea whether it makes
 Filament sits on shelves in half-used spools and I cannot tell how much is left on any of them
 without guessing, so I over-order or start a print that runs out halfway. When someone asks what a
 print costs, I make a number up: I know roughly what a spool cost and roughly how long the printer
-ran, but not what *this* object cost me once electricity and machine wear are counted. So I price by
+ran, but not what _this_ object cost me once electricity and machine wear are counted. So I price by
 feel, and I suspect some items I sell at a loss.
 
 I also have no idea whether the printer has paid for itself, which designs are actually worth
@@ -23,7 +23,7 @@ I record what I buy (**Spools**), what I can print (**Designs**), what I actuall
 (**Prints**, which consume filament from specific Spools and produce a counted batch of copies), and
 what I sold (**Sales**, each against one copy from one Print).
 
-Pricing lives on the **Design**. A Design holds the slicer's estimates for *one copy* and shows what
+Pricing lives on the **Design**. A Design holds the slicer's estimates for _one copy_ and shows what
 that copy would cost in each **Filament Type** I stock, plus a suggested price with my margin on
 top. A **Print** shows what the job really cost and what each copy really cost — no second price.
 
@@ -351,7 +351,7 @@ Test helpers construct a fixture with known Settings so cost assertions are stab
 - **Design pricing** — the Design reference case exactly; the €0.50 round-up including the
   already-exact boundary; a design's own margin driving its price; a new design inheriting
   `defaultMargin`; changing `defaultMargin` leaving existing designs untouched.
-- **Quote basis** — with three PLA spools in stock the most expensive *capable* one is chosen; a
+- **Quote basis** — with three PLA spools in stock the most expensive _capable_ one is chosen; a
   spool too small for `estimatedGrams` is excluded even though it is active; with no capable spool
   the fallback reference price is used and flagged; a type never bought produces no row.
 - **Spool remaining** — consumption by prints; re-weigh adjustment computed from tare; sequences of
@@ -359,7 +359,7 @@ Test helpers construct a fixture with known Settings so cost assertions are stab
 - **Overdraw and type rules** — a single row exceeding remaining is rejected; the same total split
   correctly across two spools of one type succeeds; two spools of different types on one print is
   rejected.
-- **Frozen cost** — a print's cost is unchanged after Settings are edited *and* after the source
+- **Frozen cost** — a print's cost is unchanged after Settings are edited _and_ after the source
   spool's purchase price is edited; a print recorded afterwards uses the new rates and the new gram
   price.
 - **Stock** — `available` arithmetic; accounting for more copies than were produced fails; selling
@@ -375,7 +375,7 @@ Test helpers construct a fixture with known Settings so cost assertions are stab
 
 ### Prior art
 
-None — this is the first code in the repo, so these tests *are* the prior art and their shape sets
+None — this is the first code in the repo, so these tests _are_ the prior art and their shape sets
 the convention. Standard library `testing` with table-driven cases, no assertion framework, no
 mocks: the real SQLite store in a temp directory is cheaper and more honest than a fake.
 
@@ -410,8 +410,8 @@ what was sold against what it sold for, while break-even counts every euro that 
 including the printer and filament still on the shelf. Both stay on screen, both labelled. Anyone
 tempted to "fix" the discrepancy should read ADR-0006 first.
 
-A Design's quote is *live*: it moves when rates change, when `estimatedGrams` changes, and when the
-spool it was quoting against runs out. A Print's cost is *frozen* and never moves. That asymmetry is
+A Design's quote is _live_: it moves when rates change, when `estimatedGrams` changes, and when the
+spool it was quoting against runs out. A Print's cost is _frozen_ and never moves. That asymmetry is
 deliberate — one is a question about the future, the other is a record of the past.
 
 `machineHourlyRateCents` is an operator estimate and now carries more weight than before: failed

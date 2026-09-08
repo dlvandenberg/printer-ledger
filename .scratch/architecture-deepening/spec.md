@@ -1,6 +1,6 @@
 # Spec: architecture deepening before tickets 02–10
 
-Status: ready-for-agent
+Status: resolved
 
 ## Problem Statement
 
