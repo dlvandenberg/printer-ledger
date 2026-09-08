@@ -77,6 +77,11 @@ One exported method per use case, `func (a *App) Verb(ctx context.Context, ...)`
   domain, never in the TUI.
 - Parsing lives in an unexported `parseVerb(cmd)` returning the domain aggregate; view assembly in
   an unexported `toNounView(...)`. The exported method stays a readable sequence of steps.
+- A read model (`SpoolLedger`, `DesignLedger`, `PrintLedger`) is what a use case asks for wherever
+  the derived number is the point: a list the operator reads, an invariant, a delete guard. A use
+  case that only needs identity — a Design's name, a Spool's color — reads the plain aggregate
+  instead, so the derived number keeps one definition and one caller cannot hold a second opinion
+  on it.
 - Anything that writes wraps its reads and writes in one `a.db.InTx(ctx, func(tx domain.Database)
   error { ... })` and only assigns to the return value inside. Read-only use cases skip `InTx`.
 - Use cases return their result by re-reading it through the same query the list uses, so what the
