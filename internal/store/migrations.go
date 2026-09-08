@@ -111,6 +111,11 @@ CREATE TABLE sales (
 
 CREATE INDEX sales_print ON sales(print_id);`,
 	},
+	{
+		name: "0008_prints_design_index",
+		sql: `
+CREATE INDEX prints_design ON prints(design_id);`,
+	},
 }
 
 func (s *Store) migrate(ctx context.Context) error {
