@@ -32,6 +32,7 @@ type printsModel struct {
 	rows      []app.PrintView
 	cursor    int
 	form      *form
+	detail    *app.PrintView
 	editing   *app.PrintView
 	confirm   *confirm
 	spools    []app.SpoolView
@@ -69,9 +70,12 @@ func (m printsModel) Help() string {
 	if m.confirm != nil {
 		return m.confirm.Help()
 	}
+	if m.detail != nil {
+		return fmt.Sprintf("%s edit · %s back · %s", KeyE, KeyEsc, globalHelp)
+	}
 	var rowHelp string
 	if len(m.rows) > 0 {
-		rowHelp = fmt.Sprintf(" · %s edit · %s delete", KeyE, KeyD)
+		rowHelp = fmt.Sprintf(" · %s detail · %s edit · %s delete", KeyEnter, KeyE, KeyD)
 	}
 	return fmt.Sprintf("%s record%s · %s/%s move · %s", KeyA, rowHelp, KeyDown, KeyUp, globalHelp)
 }
@@ -84,6 +88,9 @@ func (m printsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	}
 	if m.confirm != nil {
 		return m.updateConfirm(msg)
+	}
+	if m.detail != nil {
+		return m.updateDetail(msg)
 	}
 
 	switch msg.String() {
@@ -101,6 +108,10 @@ func (m printsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		if len(m.rows) > 0 {
 			m.askDelete(m.rows[m.cursor])
 		}
+	case KeyEnter:
+		if len(m.rows) > 0 {
+			m.openDetail(m.rows[m.cursor].ID)
+		}
 	case KeyUp, KeyK:
 		if m.cursor > 0 {
 			m.cursor--
@@ -111,6 +122,27 @@ func (m printsModel) Update(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func (m printsModel) updateDetail(msg tea.KeyMsg) (tabModel, tea.Cmd) {
+	switch msg.String() {
+	case KeyEsc:
+		m.detail = nil
+	case KeyE:
+		if err := m.openEditForm(*m.detail); err != nil {
+			m.loadErr = err
+		}
+	}
+	return m, nil
+}
+
+func (m *printsModel) openDetail(id int64) {
+	detail, err := m.app.PrintDetail(context.Background(), id)
+	if err != nil {
+		m.loadErr = err
+		return
+	}
+	m.detail = &detail
 }
 
 func (m *printsModel) openForm() error {
@@ -226,10 +258,16 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m printsModel) submitForm() error {
+func (m *printsModel) submitForm() error {
 	if m.editing != nil {
-		_, err := m.app.EditPrint(context.Background(), editPrintCmd(m.form, m.editing.ID, m.usageRows))
-		return err
+		edited, err := m.app.EditPrint(context.Background(), editPrintCmd(m.form, m.editing.ID, m.usageRows))
+		if err != nil {
+			return err
+		}
+		if m.detail != nil {
+			m.detail = &edited
+		}
+		return nil
 	}
 	_, err := m.app.RecordPrint(context.Background(), recordPrintCmd(m.form, m.usageRows))
 	return err
@@ -331,6 +369,9 @@ func (m printsModel) View() string {
 		}
 		return m.failure() + m.form.View() + "\n" + costBreakdown(m.preview)
 	}
+	if m.detail != nil {
+		return m.failure() + printDetailView(*m.detail)
+	}
 
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("Prints"))
@@ -370,21 +411,28 @@ func (m printsModel) View() string {
 // shows a suggested price: the price was decided on the Design. An unmeasured
 // power rate warns and never blocks: the figure is a placeholder, not an error.
 func costBreakdown(preview app.PrintPreviewView) string {
-	cost := preview.Cost
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("Cost"))
 	b.WriteString("\n")
-	fmt.Fprintf(&b, printCostLine, "filament", costAmount(cost.Filament, plainStyle))
-	fmt.Fprintf(&b, printCostLine, "energy", costAmount(cost.Energy, plainStyle))
-	fmt.Fprintf(&b, printCostLine, "overhead", costAmount(cost.Overhead, plainStyle))
-	fmt.Fprintf(&b, printCostLine, "job cost", costAmount(cost.JobCost, titleStyle))
-	fmt.Fprintf(&b, printCostLine, "per copy", costAmount(cost.CostPerCopy, titleStyle))
+	b.WriteString(costLines(preview.Cost))
 	if preview.RateSeeded {
 		b.WriteString("\n")
 		b.WriteString(warningStyle.Render(fmt.Sprintf(
 			"energy uses the %s rate the ledger seeded, not a measured one", preview.FilamentType)))
 		b.WriteString("\n")
 	}
+	return b.String()
+}
+
+// costLines is the breakdown the form and the detail screen share, so the two
+// cannot show one cost split two ways.
+func costLines(cost app.PrintCostView) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, printCostLine, "filament", costAmount(cost.Filament, plainStyle))
+	fmt.Fprintf(&b, printCostLine, "energy", costAmount(cost.Energy, plainStyle))
+	fmt.Fprintf(&b, printCostLine, "overhead", costAmount(cost.Overhead, plainStyle))
+	fmt.Fprintf(&b, printCostLine, "job cost", costAmount(cost.JobCost, titleStyle))
+	fmt.Fprintf(&b, printCostLine, "per copy", costAmount(cost.CostPerCopy, titleStyle))
 	return b.String()
 }
 
@@ -404,6 +452,9 @@ func (m printsModel) failure() string {
 func (m printsModel) Refresh() tabModel {
 	if err := m.reload(); err != nil {
 		m.loadErr = err
+	}
+	if m.detail != nil {
+		m.openDetail(m.detail.ID)
 	}
 	return m
 }

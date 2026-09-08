@@ -204,6 +204,24 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 	return views, nil
 }
 
+// PrintDetail re-reads one Print through the same assembly the list uses:
+// nothing on the detail screen is detail-only.
+func (a *App) PrintDetail(ctx context.Context, id int64) (PrintView, error) {
+	ledger, err := a.db.PrintLedger(ctx, id)
+	if err != nil {
+		return PrintView{}, err
+	}
+	design, err := designOf(ctx, a.db, ledger.Print.DesignID)
+	if err != nil {
+		return PrintView{}, err
+	}
+	spools, err := a.db.SpoolLedgers(ctx)
+	if err != nil {
+		return PrintView{}, err
+	}
+	return toPrintView(ledger, design, spools), nil
+}
+
 func (a *App) PrintDraft(ctx context.Context, designID int64, quantity string) (PrintDraftView, error) {
 	design, err := designOf(ctx, a.db, designID)
 	if err != nil {

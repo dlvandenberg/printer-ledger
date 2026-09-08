@@ -27,11 +27,16 @@ move what is shown.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] `enter` on a Prints row opens that Print's detail, `esc` returns to the list
-- [ ] The detail shows the stock counts, the cost breakdown, the usage rows and the frozen rate snapshot
-- [ ] A print drawing from two Spools shows one usage row per draw, each naming its Spool, type, grams and frozen gram price
-- [ ] Asking for a Print that does not exist reports not found rather than an empty screen
-- [ ] `e` from the detail edits the Print and comes back to the updated detail
-- [ ] `CONTEXT.md` gains the Print Ledger entry
+- [x] `enter` on a Prints row opens that Print's detail, `esc` returns to the list
+- [x] The detail shows the stock counts, the cost breakdown, the usage rows and the frozen rate snapshot
+- [x] A print drawing from two Spools shows one usage row per draw, each naming its Spool, type, grams and frozen gram price
+- [x] Asking for a Print that does not exist reports not found rather than an empty screen
+- [x] `e` from the detail edits the Print and comes back to the updated detail
+- [x] `CONTEXT.md` gains the Print Ledger entry
+
+## Comments
+
+The **Print Ledger** entry was already in `CONTEXT.md`, added by `80e2927` alongside this issue, and
+the **Print** entry already records the rate snapshot. Nothing needed changing for this screen.

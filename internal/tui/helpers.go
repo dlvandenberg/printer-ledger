@@ -43,6 +43,15 @@ func pad(s string, width int) string {
 	return s
 }
 
+// column right-aligns on display width: a width verb counts the bytes of the
+// € prefix instead and leaves the figure two columns short.
+func column(s string, width int) string {
+	if gap := width - lipgloss.Width(s); gap > 0 {
+		return strings.Repeat(" ", gap) + s
+	}
+	return s
+}
+
 func truncate(s string, width int) string {
 	r := []rune(s)
 	if len(r) <= width {

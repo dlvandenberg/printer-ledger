@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
@@ -566,5 +567,174 @@ func TestRecordPrintAcceptsACommaTypedUsageRow(t *testing.T) {
 
 	if got := recordedPrint(t, a, cmd); got.UsedGrams != 8559 {
 		t.Errorf("UsedGrams = %d, want 8559", got.UsedGrams)
+	}
+}
+
+func TestPrintDetailShowsStockCostAndRateSnapshot(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+	cmd := printOf(design.ID, spool.ID)
+	cmd.Quantity = "4"
+	cmd.Gifted = "1"
+	cmd.Kept = "1"
+	cmd.Scrapped = "1"
+	recorded := recordedPrint(t, a, cmd)
+	recordedSale(t, a, saleOf(recorded.ID))
+
+	got, err := a.PrintDetail(ctx(), recorded.ID)
+	if err != nil {
+		t.Fatalf("PrintDetail: %v", err)
+	}
+
+	if got.DesignName != "Planter" {
+		t.Errorf("DesignName = %q, want \"Planter\"", got.DesignName)
+	}
+	if got.Quantity != 4 {
+		t.Errorf("Quantity = %d, want 4", got.Quantity)
+	}
+	if got.Minutes != 330 {
+		t.Errorf("Minutes = %d, want 330", got.Minutes)
+	}
+	if got.SoldCount != 1 {
+		t.Errorf("SoldCount = %d, want 1", got.SoldCount)
+	}
+	if got.GiftedCount != 1 {
+		t.Errorf("GiftedCount = %d, want 1", got.GiftedCount)
+	}
+	if got.KeptCount != 1 {
+		t.Errorf("KeptCount = %d, want 1", got.KeptCount)
+	}
+	if got.ScrappedCount != 1 {
+		t.Errorf("ScrappedCount = %d, want 1", got.ScrappedCount)
+	}
+	if got.AvailableCopies != 0 {
+		t.Errorf("AvailableCopies = %d, want 0", got.AvailableCopies)
+	}
+	if got.Cost.Filament != 264 {
+		t.Errorf("Filament = %d, want 264", got.Cost.Filament)
+	}
+	if got.Cost.Energy != 14 {
+		t.Errorf("Energy = %d, want 14", got.Cost.Energy)
+	}
+	if got.Cost.Overhead != 193 {
+		t.Errorf("Overhead = %d, want 193", got.Cost.Overhead)
+	}
+	if got.Cost.JobCost != 471 {
+		t.Errorf("JobCost = %d, want 471", got.Cost.JobCost)
+	}
+	if got.Cost.CostPerCopy != 117 {
+		t.Errorf("CostPerCopy = %d, want 117", got.Cost.CostPerCopy)
+	}
+	if got.KwhPrice != 28 {
+		t.Errorf("KwhPrice = %d, want 28", got.KwhPrice)
+	}
+	if got.KwhPerHour != 0.09 {
+		t.Errorf("KwhPerHour = %v, want 0.09", got.KwhPerHour)
+	}
+	if got.MachineRate != 35 {
+		t.Errorf("MachineRate = %d, want 35", got.MachineRate)
+	}
+}
+
+func TestPrintDetailNamesEachSpoolDraw(t *testing.T) {
+	a := newApp(t)
+	ranOut := addedSpool(t, a, spoolColored("Black"))
+	replacement := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "30.00"))
+	design := addedDesign(t, a, quotedDesign())
+	recorded := recordedPrint(t, a, printOfRows(design.ID,
+		usage(ranOut.ID, "40"), usage(replacement.ID, "80")))
+
+	got, err := a.PrintDetail(ctx(), recorded.ID)
+	if err != nil {
+		t.Fatalf("PrintDetail: %v", err)
+	}
+
+	if len(got.Usages) != 2 {
+		t.Fatalf("returned %d usage rows, want 2", len(got.Usages))
+	}
+	first, second := got.Usages[0], got.Usages[1]
+	if first.SpoolID != ranOut.ID || second.SpoolID != replacement.ID {
+		t.Errorf("SpoolIDs = %d, %d, want %d, %d",
+			first.SpoolID, second.SpoolID, ranOut.ID, replacement.ID)
+	}
+	if first.SpoolColor != "Black" {
+		t.Errorf("SpoolColor = %q, want \"Black\"", first.SpoolColor)
+	}
+	if first.FilamentType != domain.PLA || second.FilamentType != domain.PLA {
+		t.Errorf("FilamentTypes = %s, %s, want PLA, PLA", first.FilamentType, second.FilamentType)
+	}
+	if first.Grams != grams(40) {
+		t.Errorf("Grams = %d, want %d", first.Grams, grams(40))
+	}
+	if second.Grams != grams(80) {
+		t.Errorf("Grams = %d, want %d", second.Grams, grams(80))
+	}
+	if first.CostPerGram != 220 {
+		t.Errorf("CostPerGram = %d, want 220", first.CostPerGram)
+	}
+	if second.CostPerGram != 300 {
+		t.Errorf("CostPerGram = %d, want 300", second.CostPerGram)
+	}
+}
+
+func TestPrintDetailKeepsFrozenGramPriceAfterSpoolRepriced(t *testing.T) {
+	a := newApp(t)
+	spool := addedSpool(t, a, spoolPriced(domain.PLA, "1000", "22.00"))
+	design := addedDesign(t, a, quotedDesign())
+	recorded := recordedPrint(t, a, printOf(design.ID, spool.ID))
+
+	repriced := editOfSpool(spool)
+	repriced.PurchaseCost = "30.00"
+	if _, err := a.EditSpool(ctx(), repriced); err != nil {
+		t.Fatalf("EditSpool: %v", err)
+	}
+
+	got, err := a.PrintDetail(ctx(), recorded.ID)
+	if err != nil {
+		t.Fatalf("PrintDetail: %v", err)
+	}
+	if got.Usages[0].CostPerGram != 220 {
+		t.Errorf("CostPerGram = %d, want 220", got.Usages[0].CostPerGram)
+	}
+	if got.Cost.JobCost != 471 {
+		t.Errorf("JobCost = %d, want 471", got.Cost.JobCost)
+	}
+}
+
+func TestPrintDetailReportsNotFound(t *testing.T) {
+	a := newApp(t)
+
+	if _, err := a.PrintDetail(ctx(), 404); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("PrintDetail error = %v, want ErrNotFound", err)
+	}
+}
+
+func TestEditPrintThenDetail(t *testing.T) {
+	a := newApp(t)
+	recorded := stockedPrint(t, a)
+
+	edited := editOfPrint(recorded)
+	edited.Minutes = "6:00"
+	edited.Usages[0].Grams = "130"
+	if _, err := a.EditPrint(ctx(), edited); err != nil {
+		t.Fatalf("EditPrint: %v", err)
+	}
+
+	got, err := a.PrintDetail(ctx(), recorded.ID)
+	if err != nil {
+		t.Fatalf("PrintDetail: %v", err)
+	}
+	if got.Minutes != 360 {
+		t.Errorf("Minutes = %d, want 360", got.Minutes)
+	}
+	if got.UsedGrams != grams(130) {
+		t.Errorf("UsedGrams = %d, want %d", got.UsedGrams, grams(130))
+	}
+	if got.Usages[0].CostPerGram != 220 {
+		t.Errorf("CostPerGram = %d, want 220", got.Usages[0].CostPerGram)
+	}
+	if got.KwhPerHour != 0.09 {
+		t.Errorf("KwhPerHour = %v, want 0.09", got.KwhPerHour)
 	}
 }
