@@ -26,7 +26,7 @@ existing tests are what say so.
 
 **Blocked by:** 11
 
-**Status:** ready-for-agent
+**Status:** migrated to GitHub issue #1 — https://github.com/dlvandenberg/printer-ledger/issues/1
 
 - [ ] The Design store answers a plain `Designs` and the Spool store a plain `Spools`, neither running the event-table subqueries
 - [ ] `ListPrints`, `ListSales` and the report read designs through the plain query

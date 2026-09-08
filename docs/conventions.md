@@ -184,6 +184,16 @@ change in domain words: `refactor: form mutates through one pointer, owns its he
 `feat: spools tab tracer bullet, add and list`. Body only when the "why" isn't obvious from the
 subject. One behavioural change per commit; a rename is its own commit.
 
+## Branches and pull requests
+
+Work never lands on `main` directly. Branch from `main` before the first commit, named
+`<issue-number>-<slug>` from the GitHub issue being implemented: `1-plain-list-queries`.
+
+A piece of work is finished by a pull request, not a push. Once `make lint` and `make test` are
+green and the review pass is done, push the branch and open one with `gh pr create`. The body says
+what changed and why in domain words, and ends with `Closes #<issue-number>` so the merge closes
+the issue. Leave the PR open — merging is the human's call.
+
 ## Docs
 
 - A decision with a live alternative becomes an ADR: `docs/adr/NNNN-slug.md`, sections
@@ -192,5 +202,5 @@ subject. One behavioural change per commit; a rename is its own commit.
   Extending one to another case is an amendment: edit the ADR in place, note it in **Status**
   (`Accepted — 2026-08-25 (amended 2026-09-04: weight)`), so there stays one place to look.
 - A new or sharpened term becomes a `CONTEXT.md` glossary entry, with the synonyms to avoid.
-- Work in progress lives in `.scratch/<feature-slug>/` (see `docs/agents/issue-tracker.md`), not in
-  code comments and not in `docs/`.
+- Work in progress lives in the GitHub issue (see `docs/agents/issue-tracker.md`), not in code
+  comments and not in `docs/`.

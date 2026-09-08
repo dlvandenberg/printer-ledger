@@ -47,6 +47,11 @@ make test
 
 Never report an implementation complete on a red lint or a failing test.
 
+## Before you open a pull request
+
+`main` is never committed to directly. Branch first, finish with a `gh pr create` that says
+`Closes #<issue-number>`, and leave the merge to the human. Details: `docs/conventions.md`.
+
 ## Conventions
 
 How the code is written — naming, validation, per-layer file shapes, comments, tests, commits,
@@ -56,7 +61,7 @@ docs: `docs/conventions.md`. Read it before writing code in a package you haven'
 
 ### Issue tracker
 
-Local markdown: issues and specs live under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
+GitHub issues in `dlvandenberg/printer-ledger`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
