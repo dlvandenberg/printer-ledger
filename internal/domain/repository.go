@@ -7,10 +7,6 @@ import (
 
 var ErrNotFound = errors.New("not found")
 
-// SpoolRepository answers a read in two shapes, as DesignRepository does. The
-// ledger carries the event totals remaining derives from; Spools carries
-// identity alone, for naming the material a Print came out in. There is no
-// by-id plain read: every single-Spool read is about remaining.
 type SpoolRepository interface {
 	CreateSpool(ctx context.Context, s Spool) (Spool, error)
 	UpdateSpool(ctx context.Context, s Spool) (Spool, error)
@@ -22,10 +18,6 @@ type SpoolRepository interface {
 	SpoolAdjustments(ctx context.Context, spoolID int64) ([]SpoolAdjustment, error)
 }
 
-// DesignRepository answers a read in two shapes. The ledger carries the print
-// count, and is what a list the operator reads, an invariant and a delete guard
-// ask for. The plain read carries the aggregate and nothing derived, so a caller
-// that only needs a name cannot hold a second opinion on that count.
 type DesignRepository interface {
 	CreateDesign(ctx context.Context, d Design) (Design, error)
 	UpdateDesign(ctx context.Context, d Design) (Design, error)

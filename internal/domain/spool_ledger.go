@@ -15,8 +15,6 @@ type SpoolLedger struct {
 	AdjustedGrams unit.Grams
 }
 
-// SpoolsOf drops the event totals, for the caller that wants the Spools a
-// ledger was read for and not the remaining it derives.
 func SpoolsOf(ledgers []SpoolLedger) []Spool {
 	spools := make([]Spool, 0, len(ledgers))
 	for _, ledger := range ledgers {
