@@ -8,30 +8,25 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
-const (
-	printDetailWidth = 10
-	printDetailLine  = "  %-12s %s\n"
-	printUsageRow    = "  %-6s  %-10s  %-16s  %10s  %10s\n" // Type, Brand, Colour, Grams, c/g
-)
+const printUsageRow = "  %-6s  %-10s  %-16s  %10s  %10s\n" // Type, Brand, Colour, Grams, c/g
 
 // printDetailView shows the rate snapshot, which is the only place those three
 // numbers are visible: they are what makes a past print's frozen cost checkable.
 func printDetailView(p app.PrintView) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n\n", titleStyle.Render(fmt.Sprintf("%s  %s", p.DesignName, unit.FormatDate(p.Date))))
-	fmt.Fprintf(&b, printDetailLine, "Copies", column(unit.FormatCopies(p.Quantity), printDetailWidth))
-	fmt.Fprintf(&b, printDetailLine, "Time", column(unit.FormatMinutes(p.Minutes), printDetailWidth))
-	fmt.Fprintf(&b, printDetailLine, "Filament", column(unit.FormatGrams(p.UsedGrams), printDetailWidth))
+	detailLine(&b, "copies", unit.FormatCopies(p.Quantity))
+	detailLine(&b, "time", unit.FormatMinutes(p.Minutes))
 
 	b.WriteString("\n")
 	b.WriteString(titleStyle.Render("Stock"))
 	b.WriteString("\n")
-	fmt.Fprintf(&b, printDetailLine, "quantity", column(unit.FormatCopies(p.Quantity), printDetailWidth))
-	fmt.Fprintf(&b, printDetailLine, "sold", column(unit.FormatCopies(p.SoldCount), printDetailWidth))
-	fmt.Fprintf(&b, printDetailLine, "gifted", column(unit.FormatCopies(p.GiftedCount), printDetailWidth))
-	fmt.Fprintf(&b, printDetailLine, "kept", column(unit.FormatCopies(p.KeptCount), printDetailWidth))
-	fmt.Fprintf(&b, printDetailLine, "scrapped", column(unit.FormatCopies(p.ScrappedCount), printDetailWidth))
-	fmt.Fprintf(&b, printDetailLine, "available", column(unit.FormatCopies(p.AvailableCopies), printDetailWidth))
+	detailLine(&b, "quantity", unit.FormatCopies(p.Quantity))
+	detailLine(&b, "sold", unit.FormatCopies(p.SoldCount))
+	detailLine(&b, "gifted", unit.FormatCopies(p.GiftedCount))
+	detailLine(&b, "kept", unit.FormatCopies(p.KeptCount))
+	detailLine(&b, "scrapped", unit.FormatCopies(p.ScrappedCount))
+	detailLine(&b, "available", unit.FormatCopies(p.AvailableCopies))
 
 	b.WriteString("\n")
 	b.WriteString(titleStyle.Render("Cost"))
@@ -54,8 +49,8 @@ func printDetailView(p app.PrintView) string {
 	b.WriteString("\n")
 	b.WriteString(titleStyle.Render("Rates when recorded"))
 	b.WriteString("\n")
-	fmt.Fprintf(&b, printDetailLine, "kwh price", column(money(p.KwhPrice), printDetailWidth))
-	fmt.Fprintf(&b, printDetailLine, "kwh per hour", column(unit.FormatKwhPerHour(p.KwhPerHour), printDetailWidth))
-	fmt.Fprintf(&b, printDetailLine, "machine rate", column(money(p.MachineRate), printDetailWidth))
+	detailLine(&b, "per kwh", money(p.KwhPrice))
+	detailLine(&b, "kwh per hour", unit.FormatKwhPerHour(p.KwhPerHour))
+	detailLine(&b, "machine per hour", money(p.MachineRate))
 	return b.String()
 }

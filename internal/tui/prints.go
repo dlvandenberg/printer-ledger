@@ -233,7 +233,8 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 		m.form = nil
 		return m, nil
 	case KeyEnter:
-		if err := m.submitForm(); err != nil {
+		saved, err := m.submitForm()
+		if err != nil {
 			var v *domain.ValidationError
 			if errors.As(err, &v) {
 				m.form.SetErrors(v)
@@ -243,6 +244,9 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 			return m, nil
 		}
 		m.form = nil
+		if m.detail != nil {
+			m.detail = &saved
+		}
 		if err := m.reload(); err != nil {
 			m.loadErr = err
 		}
@@ -258,19 +262,11 @@ func (m printsModel) updateForm(msg tea.KeyMsg) (tabModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m *printsModel) submitForm() error {
+func (m printsModel) submitForm() (app.PrintView, error) {
 	if m.editing != nil {
-		edited, err := m.app.EditPrint(context.Background(), editPrintCmd(m.form, m.editing.ID, m.usageRows))
-		if err != nil {
-			return err
-		}
-		if m.detail != nil {
-			m.detail = &edited
-		}
-		return nil
+		return m.app.EditPrint(context.Background(), editPrintCmd(m.form, m.editing.ID, m.usageRows))
 	}
-	_, err := m.app.RecordPrint(context.Background(), recordPrintCmd(m.form, m.usageRows))
-	return err
+	return m.app.RecordPrint(context.Background(), recordPrintCmd(m.form, m.usageRows))
 }
 
 // addUsageRow and removeUsageRow record a mid-print spool swap as one Print
@@ -424,8 +420,6 @@ func costBreakdown(preview app.PrintPreviewView) string {
 	return b.String()
 }
 
-// costLines is the breakdown the form and the detail screen share, so the two
-// cannot show one cost split two ways.
 func costLines(cost app.PrintCostView) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, printCostLine, "filament", costAmount(cost.Filament, plainStyle))
@@ -439,7 +433,7 @@ func costLines(cost app.PrintCostView) string {
 // costAmount pads before styling: a width verb counts the escape bytes of an
 // already-styled string, so a bold amount would sit short of its column.
 func costAmount(cents unit.Cents, style lipgloss.Style) string {
-	return style.Render(fmt.Sprintf("%10s", currency+unit.FormatCents(cents)))
+	return style.Render(column(money(cents), detailValueWidth))
 }
 
 func (m printsModel) failure() string {
@@ -453,6 +447,8 @@ func (m printsModel) Refresh() tabModel {
 	if err := m.reload(); err != nil {
 		m.loadErr = err
 	}
+	// An open detail is re-read on a tab switch because a Sale recorded on
+	// another tab moves its sold count. Its cost cannot move: that is frozen.
 	if m.detail != nil {
 		m.openDetail(m.detail.ID)
 	}

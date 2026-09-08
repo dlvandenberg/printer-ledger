@@ -13,11 +13,12 @@ func spoolDetailView(d app.SpoolDetailView) string {
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n\n", titleStyle.Render(fmt.Sprintf("%s %s %s", spool.FilamentType, spool.Brand, spool.Color)))
-	fmt.Fprintf(&b, "  %-12s %10s\n", "Initial", unit.FormatGrams(spool.InitialGrams))
-	fmt.Fprintf(&b, "  %-12s %10s\n", "Printed", unit.FormatGrams(-spool.UsedGrams))
-	fmt.Fprintf(&b, "  %-12s %10s\n", "Adjusted", unit.FormatGrams(spool.AdjustedGrams))
-	fmt.Fprintf(&b, "  %-12s %10s  %s  %s\n", "Remaining", unit.FormatGrams(spool.RemainingGrams),
-		currency+unit.FormatCents(spool.RemainingValue), spool.State)
+	detailLine(&b, "initial", unit.FormatGrams(spool.InitialGrams))
+	detailLine(&b, "printed", unit.FormatGrams(-spool.UsedGrams))
+	detailLine(&b, "adjusted", unit.FormatGrams(spool.AdjustedGrams))
+	detailLine(&b, "remaining", fmt.Sprintf("%s  %s  %s",
+		column(unit.FormatGrams(spool.RemainingGrams), detailValueWidth),
+		money(spool.RemainingValue), spool.State))
 
 	b.WriteString("\n")
 	b.WriteString(titleStyle.Render("Adjustments"))

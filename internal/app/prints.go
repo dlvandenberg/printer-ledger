@@ -190,8 +190,6 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 	return views, nil
 }
 
-// PrintDetail reads no more than the list does: nothing on the detail screen is
-// detail-only.
 func (a *App) PrintDetail(ctx context.Context, id int64) (PrintView, error) {
 	return printViewOf(ctx, a.db, id)
 }

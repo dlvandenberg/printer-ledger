@@ -14,13 +14,22 @@ import (
 const (
 	materialColorLimit = 2
 	materialWidth      = 16
+	amountWidth        = 12
+	detailValueWidth   = 10
+	detailLineFormat   = "  %-12s %s\n"
 )
 
 func money(c unit.Cents) string { return currency + unit.FormatCents(c) }
 
 // amount pads before styling: a width verb counts the escape bytes of an
 // already-styled string, so a bold figure would sit short of its column.
-func amount(s string) string { return fmt.Sprintf("%12s", s) }
+func amount(s string) string { return column(s, amountWidth) }
+
+// detailLine is one labelled figure of a detail screen, so the label column and
+// the figure column are set in one place.
+func detailLine(b *strings.Builder, label, value string) {
+	fmt.Fprintf(b, detailLineFormat, label, column(value, detailValueWidth))
+}
 
 // material names a Print by what it was printed in, which is what tells two
 // Prints of one Design apart. A swap of more than two spools would push the row
