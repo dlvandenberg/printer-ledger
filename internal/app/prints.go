@@ -179,7 +179,7 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 		return nil, err
 	}
 	byDesign := designsByID(designs)
-	spools, err := a.db.SpoolLedgers(ctx)
+	spools, err := a.db.Spools(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func (a *App) PreviewPrint(ctx context.Context, cmd RecordPrintCmd) (PrintPrevie
 	}
 
 	drafted := draftPrint(cmd, &domain.ValidationError{}).WithRates(settings, ledgers)
-	filamentType := drafted.FilamentType(ledgers)
+	filamentType := drafted.FilamentType(domain.SpoolsOf(ledgers))
 	return PrintPreviewView{
 		Cost:         toPrintCostView(drafted),
 		FilamentType: filamentType,
@@ -250,7 +250,7 @@ func (a *App) PreviewEditPrint(ctx context.Context, cmd EditPrintCmd) (PrintPrev
 	drafted := draftPrint(cmd.RecordPrintCmd, &domain.ValidationError{}).WithFrozenRatesOf(stored.Print, ledgers)
 	return PrintPreviewView{
 		Cost:         toPrintCostView(drafted),
-		FilamentType: drafted.FilamentType(ledgers),
+		FilamentType: drafted.FilamentType(domain.SpoolsOf(ledgers)),
 	}, nil
 }
 
@@ -316,14 +316,14 @@ func printViewOf(ctx context.Context, db domain.Database, id int64) (PrintView, 
 	if err != nil {
 		return PrintView{}, err
 	}
-	spools, err := db.SpoolLedgers(ctx)
+	spools, err := db.Spools(ctx)
 	if err != nil {
 		return PrintView{}, err
 	}
 	return toPrintView(ledger, design, spools), nil
 }
 
-func toPrintView(l domain.PrintLedger, design domain.Design, ledgers []domain.SpoolLedger) PrintView {
+func toPrintView(l domain.PrintLedger, design domain.Design, spools []domain.Spool) PrintView {
 	p := l.Print
 	usages := make([]FilamentUsageView, 0, len(p.Usages))
 	for _, usage := range p.Usages {
@@ -332,13 +332,13 @@ func toPrintView(l domain.PrintLedger, design domain.Design, ledgers []domain.Sp
 			Grams:       usage.Grams,
 			CostPerGram: usage.CostPerGram,
 		}
-		for _, ledger := range ledgers {
-			if ledger.Spool.ID != usage.SpoolID {
+		for _, spool := range spools {
+			if spool.ID != usage.SpoolID {
 				continue
 			}
-			view.SpoolBrand = ledger.Spool.Brand
-			view.SpoolColor = ledger.Spool.Color
-			view.FilamentType = ledger.Spool.FilamentType
+			view.SpoolBrand = spool.Brand
+			view.SpoolColor = spool.Color
+			view.FilamentType = spool.FilamentType
 		}
 		usages = append(usages, view)
 	}
