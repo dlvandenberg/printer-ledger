@@ -10,12 +10,19 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
+const spoolQuery = `
+SELECT s.id, s.filament_type, s.brand, s.color, s.initial_centigrams, s.tare_centigrams,
+       s.purchase_cost_cents, s.purchase_date
+FROM spools s`
+
 const spoolLedgerQuery = `
 SELECT s.id, s.filament_type, s.brand, s.color, s.initial_centigrams, s.tare_centigrams,
        s.purchase_cost_cents, s.purchase_date,
        COALESCE((SELECT SUM(u.centigrams) FROM filament_usages u WHERE u.spool_id = s.id), 0) AS used_centigrams,
        COALESCE((SELECT SUM(a.delta_centigrams) FROM spool_adjustments a WHERE a.spool_id = s.id), 0) AS adjusted_centigrams
 FROM spools s`
+
+const spoolOrder = ` ORDER BY s.purchase_date DESC, s.id DESC`
 
 const spoolAdjustmentQuery = `
 SELECT a.id, a.spool_id, a.measured_centigrams, a.delta_centigrams,
@@ -88,8 +95,30 @@ func (s *Store) DeleteSpool(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (s *Store) Spools(ctx context.Context) ([]domain.Spool, error) {
+	rows, err := s.q().QueryContext(ctx, spoolQuery+spoolOrder)
+	if err != nil {
+		return nil, fmt.Errorf("list spools: %w", err)
+	}
+	//nolint:errcheck
+	defer rows.Close()
+
+	var spools []domain.Spool
+	for rows.Next() {
+		spool, err := scanSpool(rows)
+		if err != nil {
+			return nil, fmt.Errorf("list spools: %w", err)
+		}
+		spools = append(spools, spool)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list spools: %w", err)
+	}
+	return spools, nil
+}
+
 func (s *Store) SpoolLedgers(ctx context.Context) ([]domain.SpoolLedger, error) {
-	rows, err := s.q().QueryContext(ctx, spoolLedgerQuery+` ORDER BY s.purchase_date DESC, s.id DESC`)
+	rows, err := s.q().QueryContext(ctx, spoolLedgerQuery+spoolOrder)
 	if err != nil {
 		return nil, fmt.Errorf("list spools: %w", err)
 	}
@@ -124,6 +153,24 @@ func (s *Store) SpoolLedger(ctx context.Context, id int64) (domain.SpoolLedger, 
 
 type scanner interface {
 	Scan(dest ...any) error
+}
+
+func scanSpool(row scanner) (domain.Spool, error) {
+	var (
+		spool        domain.Spool
+		filamentType string
+		purchaseDate string
+	)
+	err := row.Scan(&spool.ID, &filamentType, &spool.Brand, &spool.Color,
+		&spool.InitialGrams, &spool.TareGrams, &spool.PurchaseCost, &purchaseDate)
+	if err != nil {
+		return domain.Spool{}, err
+	}
+	spool.FilamentType = domain.FilamentType(filamentType)
+	if spool.PurchaseDate, err = unit.ParseDate(purchaseDate); err != nil {
+		return domain.Spool{}, err
+	}
+	return spool, nil
 }
 
 func scanSpoolLedger(row scanner) (domain.SpoolLedger, error) {

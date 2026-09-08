@@ -7,9 +7,14 @@ import (
 
 var ErrNotFound = errors.New("not found")
 
+// SpoolRepository answers a read in two shapes, as DesignRepository does. The
+// ledger carries the event totals remaining derives from; Spools carries
+// identity alone, for naming the material a Print came out in. There is no
+// by-id plain read: every single-Spool read is about remaining.
 type SpoolRepository interface {
 	CreateSpool(ctx context.Context, s Spool) (Spool, error)
 	UpdateSpool(ctx context.Context, s Spool) (Spool, error)
+	Spools(ctx context.Context) ([]Spool, error)
 	SpoolLedgers(ctx context.Context) ([]SpoolLedger, error)
 	SpoolLedger(ctx context.Context, id int64) (SpoolLedger, error)
 	DeleteSpool(ctx context.Context, id int64) error

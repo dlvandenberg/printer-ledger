@@ -119,7 +119,7 @@ func validatePrint(p Print, ledgers []SpoolLedger, v *ValidationError) {
 // (ADR-0021), and reports the overdraw once, on the row that crosses what is
 // left.
 func validateUsages(p Print, ledgers []SpoolLedger, v *ValidationError) {
-	printType := p.FilamentType(ledgers)
+	printType := p.FilamentType(SpoolsOf(ledgers))
 	requested := map[int64]unit.Grams{}
 	overdrawn := map[int64]bool{}
 	for row, usage := range p.Usages {
@@ -154,7 +154,7 @@ func (p Print) WithRates(s Settings, ledgers []SpoolLedger) Print {
 	}
 	p.Usages = usages
 	p.KwhPrice = s.KwhPrice
-	p.KwhPerHour = s.PowerRate(p.FilamentType(ledgers)).KwhPerHour
+	p.KwhPerHour = s.PowerRate(p.FilamentType(SpoolsOf(ledgers))).KwhPerHour
 	p.MachineRate = s.MachineHourlyRate
 	return p
 }
@@ -217,10 +217,10 @@ func (p Print) filamentCost() unit.Cents {
 // FilamentType is the type the energy rate is looked up by. All usage rows are
 // Spools of one Filament Type (ADR-0012), so the first row that names a spool
 // on the shelf decides, and every later row is validated against it.
-func (p Print) FilamentType(ledgers []SpoolLedger) FilamentType {
+func (p Print) FilamentType(spools []Spool) FilamentType {
 	for _, usage := range p.Usages {
-		if ledger, ok := findLedger(ledgers, usage.SpoolID); ok {
-			return ledger.Spool.FilamentType
+		if spool, ok := findSpool(spools, usage.SpoolID); ok {
+			return spool.FilamentType
 		}
 	}
 	return ""
@@ -257,6 +257,15 @@ func releaseUsage(ledgers []SpoolLedger, p Print) []SpoolLedger {
 	return released
 }
 
+func findSpool(spools []Spool, spoolID int64) (Spool, bool) {
+	for _, spool := range spools {
+		if spool.ID == spoolID {
+			return spool, true
+		}
+	}
+	return Spool{}, false
+}
+
 func findLedger(ledgers []SpoolLedger, spoolID int64) (SpoolLedger, bool) {
 	for _, ledger := range ledgers {
 		if ledger.Spool.ID == spoolID {
@@ -271,7 +280,7 @@ func findLedger(ledgers []SpoolLedger, spoolID int64) (SpoolLedger, bool) {
 // buyer sees. A swap mid-print puts two colors on one Print and both are named.
 // Colors are compared as the operator typed them: folding case would be the
 // first step of a normalisation this ledger does not do.
-func (p Print) SpoolColors(ledgers []SpoolLedger) []string {
+func (p Print) SpoolColors(spools []Spool) []string {
 	grams := map[int64]unit.Grams{}
 	order := make([]int64, 0, len(p.Usages))
 	for _, usage := range p.Usages {
@@ -290,11 +299,11 @@ func (p Print) SpoolColors(ledgers []SpoolLedger) []string {
 
 	colors := make([]string, 0, len(order))
 	for _, spoolID := range order {
-		ledger, ok := findLedger(ledgers, spoolID)
-		if !ok || slices.Contains(colors, ledger.Spool.Color) {
+		spool, ok := findSpool(spools, spoolID)
+		if !ok || slices.Contains(colors, spool.Color) {
 			continue
 		}
-		colors = append(colors, ledger.Spool.Color)
+		colors = append(colors, spool.Color)
 	}
 	return colors
 }

@@ -42,7 +42,7 @@ type MaterialView struct {
 	Colors       []string
 }
 
-func materialOf(print domain.Print, spools []domain.SpoolLedger) MaterialView {
+func materialOf(print domain.Print, spools []domain.Spool) MaterialView {
 	return MaterialView{
 		FilamentType: print.FilamentType(spools),
 		Colors:       print.SpoolColors(spools),
@@ -163,7 +163,7 @@ func (a *App) ListSales(ctx context.Context) ([]SaleView, error) {
 		return nil, err
 	}
 	byDesign := designsByID(designs)
-	spools, err := a.db.SpoolLedgers(ctx)
+	spools, err := a.db.Spools(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 			PrintID:           ledger.Print.ID,
 			DesignID:          design.ID,
 			DesignName:        design.Name,
-			Material:          materialOf(ledger.Print, spools),
+			Material:          materialOf(ledger.Print, domain.SpoolsOf(spools)),
 			Date:              ledger.Print.Date,
 			AvailableCopies:   ledger.Available(),
 			CostPerCopy:       ledger.Print.CostPerCopy(),
@@ -338,7 +338,7 @@ func readSaleView(ctx context.Context, tx domain.Database, sale domain.Sale) (Sa
 	if err != nil {
 		return SaleView{}, err
 	}
-	spools, err := tx.SpoolLedgers(ctx)
+	spools, err := tx.Spools(ctx)
 	if err != nil {
 		return SaleView{}, err
 	}
@@ -348,7 +348,7 @@ func readSaleView(ctx context.Context, tx domain.Database, sale domain.Sale) (Sa
 // toSaleView carries the frozen cost of the copy but no floor verdict: the
 // floor moves with Settings.minMargin, and a warning is a thing said while the
 // price is being typed, not a judgement re-passed on a past sale (ADR-0016).
-func toSaleView(sale domain.Sale, ledger domain.PrintLedger, design domain.Design, spools []domain.SpoolLedger) SaleView {
+func toSaleView(sale domain.Sale, ledger domain.PrintLedger, design domain.Design, spools []domain.Spool) SaleView {
 	return SaleView{
 		ID:          sale.ID,
 		PrintID:     sale.PrintID,
