@@ -217,6 +217,7 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 		return nil, err
 	}
 
+	material := domain.SpoolsOf(spools)
 	suggested := map[int64]unit.Cents{}
 	hasSuggested := map[int64]bool{}
 	for _, design := range designs {
@@ -237,7 +238,7 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 			PrintID:           ledger.Print.ID,
 			DesignID:          design.ID,
 			DesignName:        design.Name,
-			Material:          materialOf(ledger.Print, domain.SpoolsOf(spools)),
+			Material:          materialOf(ledger.Print, material),
 			Date:              ledger.Print.Date,
 			AvailableCopies:   ledger.Available(),
 			CostPerCopy:       ledger.Print.CostPerCopy(),
