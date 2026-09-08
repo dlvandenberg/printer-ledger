@@ -91,8 +91,7 @@ type PrintDraftView struct {
 func (a *App) RecordPrint(ctx context.Context, cmd RecordPrintCmd) (PrintView, error) {
 	var view PrintView
 	err := a.db.InTx(ctx, func(tx domain.Database) error {
-		design, err := designOf(ctx, tx, cmd.DesignID)
-		if err != nil {
+		if _, err := designOf(ctx, tx, cmd.DesignID); err != nil {
 			return err
 		}
 		settings, err := tx.Settings(ctx)
@@ -113,12 +112,8 @@ func (a *App) RecordPrint(ctx context.Context, cmd RecordPrintCmd) (PrintView, e
 		if err != nil {
 			return err
 		}
-		stored, err := tx.PrintLedger(ctx, created.ID)
-		if err != nil {
-			return err
-		}
-		view = toPrintView(stored, design, ledgers)
-		return nil
+		view, err = printViewOf(ctx, tx, created.ID)
+		return err
 	})
 	if err != nil {
 		return PrintView{}, err
@@ -136,8 +131,7 @@ func (a *App) EditPrint(ctx context.Context, cmd EditPrintCmd) (PrintView, error
 		if err != nil {
 			return err
 		}
-		design, err := designOf(ctx, tx, cmd.DesignID)
-		if err != nil {
+		if _, err := designOf(ctx, tx, cmd.DesignID); err != nil {
 			return err
 		}
 		ledgers, err := tx.SpoolLedgers(ctx)
@@ -153,16 +147,8 @@ func (a *App) EditPrint(ctx context.Context, cmd EditPrintCmd) (PrintView, error
 		if _, err := tx.UpdatePrint(ctx, edited); err != nil {
 			return err
 		}
-		reread, err := tx.PrintLedger(ctx, cmd.PrintID)
-		if err != nil {
-			return err
-		}
-		rereadLedgers, err := tx.SpoolLedgers(ctx)
-		if err != nil {
-			return err
-		}
-		view = toPrintView(reread, design, rereadLedgers)
-		return nil
+		view, err = printViewOf(ctx, tx, cmd.PrintID)
+		return err
 	})
 	if err != nil {
 		return PrintView{}, err
@@ -204,22 +190,10 @@ func (a *App) ListPrints(ctx context.Context) ([]PrintView, error) {
 	return views, nil
 }
 
-// PrintDetail re-reads one Print through the same assembly the list uses:
-// nothing on the detail screen is detail-only.
+// PrintDetail reads no more than the list does: nothing on the detail screen is
+// detail-only.
 func (a *App) PrintDetail(ctx context.Context, id int64) (PrintView, error) {
-	ledger, err := a.db.PrintLedger(ctx, id)
-	if err != nil {
-		return PrintView{}, err
-	}
-	design, err := designOf(ctx, a.db, ledger.Print.DesignID)
-	if err != nil {
-		return PrintView{}, err
-	}
-	spools, err := a.db.SpoolLedgers(ctx)
-	if err != nil {
-		return PrintView{}, err
-	}
-	return toPrintView(ledger, design, spools), nil
+	return printViewOf(ctx, a.db, id)
 }
 
 func (a *App) PrintDraft(ctx context.Context, designID int64, quantity string) (PrintDraftView, error) {
@@ -330,6 +304,24 @@ func parseQuantity(raw string) (unit.Copies, error) {
 		return 0, err
 	}
 	return copies, nil
+}
+
+// printViewOf is how a Print reads back, and every use case that returns one
+// goes through it: what a caller gets is what a later query reports.
+func printViewOf(ctx context.Context, db domain.Database, id int64) (PrintView, error) {
+	ledger, err := db.PrintLedger(ctx, id)
+	if err != nil {
+		return PrintView{}, err
+	}
+	design, err := designOf(ctx, db, ledger.Print.DesignID)
+	if err != nil {
+		return PrintView{}, err
+	}
+	spools, err := db.SpoolLedgers(ctx)
+	if err != nil {
+		return PrintView{}, err
+	}
+	return toPrintView(ledger, design, spools), nil
 }
 
 func toPrintView(l domain.PrintLedger, design domain.Design, ledgers []domain.SpoolLedger) PrintView {
