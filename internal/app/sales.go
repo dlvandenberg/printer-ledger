@@ -211,17 +211,17 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 	if err != nil {
 		return nil, err
 	}
-	byID := designsByID(designs)
-	spools, err := a.db.SpoolLedgers(ctx)
+	byDesign := designsByID(designs)
+	spoolLedgers, err := a.db.SpoolLedgers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	material := domain.SpoolsOf(spools)
+	spools := domain.SpoolsOf(spoolLedgers)
 	suggested := map[int64]unit.Cents{}
 	hasSuggested := map[int64]bool{}
 	for _, design := range designs {
-		price, ok := domain.NewDesignQuote(design, settings, spools).SuggestedPrice()
+		price, ok := domain.NewDesignQuote(design, settings, spoolLedgers).SuggestedPrice()
 		suggested[design.ID], hasSuggested[design.ID] = price, ok
 	}
 
@@ -233,12 +233,12 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 		if ledger.Available() < 1 {
 			continue
 		}
-		design := byID[ledger.Print.DesignID]
+		design := byDesign[ledger.Print.DesignID]
 		views = append(views, SellablePrintView{
 			PrintID:           ledger.Print.ID,
 			DesignID:          design.ID,
 			DesignName:        design.Name,
-			Material:          materialOf(ledger.Print, material),
+			Material:          materialOf(ledger.Print, spools),
 			Date:              ledger.Print.Date,
 			AvailableCopies:   ledger.Available(),
 			CostPerCopy:       ledger.Print.CostPerCopy(),
@@ -268,14 +268,14 @@ func (a *App) PreviewSale(ctx context.Context, cmd RecordSaleCmd) (SalePreviewVi
 	if err != nil {
 		return SalePreviewView{}, err
 	}
-	spools, err := a.db.SpoolLedgers(ctx)
+	spoolLedgers, err := a.db.SpoolLedgers(ctx)
 	if err != nil {
 		return SalePreviewView{}, err
 	}
 
 	cost := ledger.Print.CostPerCopy()
 	price, priced := draftPrice(cmd.Price)
-	suggested, hasSuggested := domain.NewDesignQuote(design, settings, spools).SuggestedPrice()
+	suggested, hasSuggested := domain.NewDesignQuote(design, settings, spoolLedgers).SuggestedPrice()
 	return SalePreviewView{
 		CostPerCopy:       cost,
 		SuggestedPrice:    suggested,
