@@ -12,9 +12,9 @@ type SpoolRepository interface {
 	UpdateSpool(ctx context.Context, s Spool) (Spool, error)
 	DeleteSpool(ctx context.Context, id int64) error
 	CreateSpoolAdjustment(ctx context.Context, a SpoolAdjustment) (SpoolAdjustment, error)
-	Spools(ctx context.Context) ([]Spool, error)
+	Spools(ctx context.Context) (Spools, error)
 	SpoolAdjustments(ctx context.Context, spoolID int64) ([]SpoolAdjustment, error)
-	SpoolLedgers(ctx context.Context) ([]SpoolLedger, error)
+	SpoolLedgers(ctx context.Context) (SpoolLedgers, error)
 	SpoolLedger(ctx context.Context, id int64) (SpoolLedger, error)
 }
 
