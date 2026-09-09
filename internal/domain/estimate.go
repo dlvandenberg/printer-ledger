@@ -27,7 +27,7 @@ type DesignQuote struct {
 	Costs  []EstimatedCost
 }
 
-func NewDesignQuote(d Design, s Settings, ledgers []SpoolLedger) DesignQuote {
+func NewDesignQuote(d Design, s Settings, ledgers SpoolLedgers) DesignQuote {
 	costs := make([]EstimatedCost, 0, len(FilamentTypes()))
 	for _, t := range FilamentTypes() {
 		spool, reference, stocked := priceSpool(t, d.EstimatedGrams, ledgers)
@@ -72,7 +72,7 @@ func SuggestedPrice(cost unit.Cents, margin unit.Percent) unit.Cents {
 // priceSpool picks the spool a Filament Type row is priced against: the most
 // expensive Capable Spool, else the most expensive of that type ever bought as
 // a reference price, else nothing and no row at all (ADR-0015).
-func priceSpool(t FilamentType, grams unit.Grams, ledgers []SpoolLedger) (spool Spool, reference, stocked bool) {
+func priceSpool(t FilamentType, grams unit.Grams, ledgers SpoolLedgers) (spool Spool, reference, stocked bool) {
 	var capable, everBought Spool
 	var haveCapable bool
 	for _, ledger := range ledgers {

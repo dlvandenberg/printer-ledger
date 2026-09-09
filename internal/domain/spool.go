@@ -126,3 +126,14 @@ func (s Spool) PricierPerGramThan(o Spool) bool {
 	}
 	return int64(s.PurchaseCost)*int64(o.InitialGrams) > int64(o.PurchaseCost)*int64(s.InitialGrams)
 }
+
+type Spools []Spool
+
+func (s Spools) find(spoolID int64) (Spool, bool) {
+	for _, spool := range s {
+		if spool.ID == spoolID {
+			return spool, true
+		}
+	}
+	return Spool{}, false
+}

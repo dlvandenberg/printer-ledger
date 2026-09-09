@@ -14,13 +14,13 @@ const FieldReportPeriod = "period"
 // model, so it takes the ledgers whole rather than querying for the slice of
 // each it needs.
 type ReportInput struct {
-	Period   Period
-	Today    time.Time
-	Prints   []PrintLedger
-	Sales    []Sale
-	Spools   []SpoolLedger
-	Designs  []Design
-	Settings Settings
+	Period       Period
+	Today        time.Time
+	PrintLedgers []PrintLedger
+	Sales        []Sale
+	SpoolLedgers SpoolLedgers
+	Designs      []Design
+	Settings     Settings
 }
 
 type Report struct {
@@ -109,7 +109,7 @@ func NewReport(in ReportInput) Report {
 	report := Report{Period: in.Period, Range: in.Period.Range(in.Today)}
 	report.Sold, report.Designs = soldInRange(in, report.Range)
 
-	for _, ledger := range in.Prints {
+	for _, ledger := range in.PrintLedgers {
 		p := ledger.Print
 		report.BreakEven.EnergySpend += p.Cost().Energy
 		report.Inventory.UnsoldCopies += ledger.Available()
@@ -123,7 +123,7 @@ func NewReport(in ReportInput) Report {
 		report.NotSold = report.NotSold.including(p)
 	}
 
-	for _, ledger := range in.Spools {
+	for _, ledger := range in.SpoolLedgers {
 		report.BreakEven.SpoolSpend += ledger.Spool.PurchaseCost
 		report.Inventory.SpoolGrams += ledger.Remaining()
 		report.Inventory.SpoolValue += ledger.RemainingValue()
@@ -139,8 +139,8 @@ func NewReport(in ReportInput) Report {
 // soldInRange costs a Sale from the Print it names, so a copy printed in one
 // period and sold in another is costed into the period it sold in.
 func soldInRange(in ReportInput, r DateRange) (SoldSummary, []DesignProfit) {
-	byPrint := make(map[int64]PrintLedger, len(in.Prints))
-	for _, ledger := range in.Prints {
+	byPrint := make(map[int64]PrintLedger, len(in.PrintLedgers))
+	for _, ledger := range in.PrintLedgers {
 		byPrint[ledger.Print.ID] = ledger
 	}
 
