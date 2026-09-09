@@ -104,13 +104,13 @@ func (a *App) Report(ctx context.Context, cmd ReportCmd) (ReportView, error) {
 	}
 
 	return toReportView(domain.NewReport(domain.ReportInput{
-		Period:   period,
-		Today:    unit.Today(),
-		Prints:   prints,
-		Sales:    sales,
-		Spools:   spools,
-		Designs:  designs,
-		Settings: settings,
+		Period:       period,
+		Today:        unit.Today(),
+		PrintLedgers: prints,
+		Sales:        sales,
+		SpoolLedgers: spools,
+		Designs:      designs,
+		Settings:     settings,
 	})), nil
 }
 

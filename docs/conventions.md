@@ -43,6 +43,8 @@ func FormatGrams(g Grams) string
   and `Names()` for anything presenting the choice. Adding a member means touching one slice.
 - The malformed-value message is built from that slice
   (`"must be one of " + strings.Join(FilamentTypeNames(), ", ")`) so it cannot drift.
+- A collection gets a named type (`Spools`, `SpoolLedgers`) when it has behaviour of its own; a
+  named slice with no methods is noise. The element type's own slice stays a plain `[]Sale`.
 
 ## Validation
 

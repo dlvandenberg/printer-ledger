@@ -15,14 +15,6 @@ type SpoolLedger struct {
 	AdjustedGrams unit.Grams
 }
 
-func SpoolsOf(ledgers []SpoolLedger) []Spool {
-	spools := make([]Spool, 0, len(ledgers))
-	for _, ledger := range ledgers {
-		spools = append(spools, ledger.Spool)
-	}
-	return spools
-}
-
 func (l SpoolLedger) Remaining() unit.Grams {
 	return l.Spool.InitialGrams - l.UsedGrams + l.AdjustedGrams
 }
@@ -43,4 +35,38 @@ func (l SpoolLedger) DeleteBlocked() error {
 		return nil
 	}
 	return fmt.Errorf("%w: %s used", ErrSpoolDrawnFrom, unit.FormatGrams(l.UsedGrams))
+}
+
+type SpoolLedgers []SpoolLedger
+
+func (l SpoolLedgers) Spools() Spools {
+	spools := make(Spools, 0, len(l))
+	for _, ledger := range l {
+		spools = append(spools, ledger.Spool)
+	}
+	return spools
+}
+
+func SpoolsOf(ledgers SpoolLedgers) Spools { return ledgers.Spools() }
+
+func (l SpoolLedgers) find(spoolID int64) (SpoolLedger, bool) {
+	for _, ledger := range l {
+		if ledger.Spool.ID == spoolID {
+			return ledger, true
+		}
+	}
+	return SpoolLedger{}, false
+}
+
+func (l SpoolLedgers) released(p Print) SpoolLedgers {
+	released := make(SpoolLedgers, 0, len(l))
+	for _, ledger := range l {
+		for _, usage := range p.Usages {
+			if usage.SpoolID == ledger.Spool.ID {
+				ledger.UsedGrams -= usage.Grams
+			}
+		}
+		released = append(released, ledger)
+	}
+	return released
 }
