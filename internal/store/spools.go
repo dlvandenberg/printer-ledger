@@ -95,7 +95,7 @@ func (s *Store) DeleteSpool(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *Store) Spools(ctx context.Context) ([]domain.Spool, error) {
+func (s *Store) Spools(ctx context.Context) (domain.Spools, error) {
 	rows, err := s.q().QueryContext(ctx, spoolQuery+spoolOrder)
 	if err != nil {
 		return nil, fmt.Errorf("list spools: %w", err)
@@ -117,7 +117,7 @@ func (s *Store) Spools(ctx context.Context) ([]domain.Spool, error) {
 	return spools, nil
 }
 
-func (s *Store) SpoolLedgers(ctx context.Context) ([]domain.SpoolLedger, error) {
+func (s *Store) SpoolLedgers(ctx context.Context) (domain.SpoolLedgers, error) {
 	rows, err := s.q().QueryContext(ctx, spoolLedgerQuery+spoolOrder)
 	if err != nil {
 		return nil, fmt.Errorf("list spools: %w", err)

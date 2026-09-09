@@ -47,8 +47,6 @@ func (l SpoolLedgers) Spools() Spools {
 	return spools
 }
 
-func SpoolsOf(ledgers SpoolLedgers) Spools { return ledgers.Spools() }
-
 func (l SpoolLedgers) find(spoolID int64) (SpoolLedger, bool) {
 	for _, ledger := range l {
 		if ledger.Spool.ID == spoolID {

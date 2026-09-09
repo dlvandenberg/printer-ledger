@@ -227,7 +227,7 @@ func (a *App) PreviewPrint(ctx context.Context, cmd RecordPrintCmd) (PrintPrevie
 	}
 
 	drafted := draftPrint(cmd, &domain.ValidationError{}).WithRates(settings, ledgers)
-	filamentType := drafted.FilamentType(domain.SpoolsOf(ledgers))
+	filamentType := drafted.FilamentType(ledgers.Spools())
 	return PrintPreviewView{
 		Cost:         toPrintCostView(drafted),
 		FilamentType: filamentType,
@@ -250,7 +250,7 @@ func (a *App) PreviewEditPrint(ctx context.Context, cmd EditPrintCmd) (PrintPrev
 	drafted := draftPrint(cmd.RecordPrintCmd, &domain.ValidationError{}).WithFrozenRatesOf(stored.Print, ledgers)
 	return PrintPreviewView{
 		Cost:         toPrintCostView(drafted),
-		FilamentType: drafted.FilamentType(domain.SpoolsOf(ledgers)),
+		FilamentType: drafted.FilamentType(ledgers.Spools()),
 	}, nil
 }
 

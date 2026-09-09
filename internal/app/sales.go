@@ -217,7 +217,7 @@ func (a *App) sellablePrints(ctx context.Context, released domain.Sale) ([]Sella
 		return nil, err
 	}
 
-	spools := domain.SpoolsOf(spoolLedgers)
+	spools := spoolLedgers.Spools()
 	suggested := map[int64]unit.Cents{}
 	hasSuggested := map[int64]bool{}
 	for _, design := range designs {
