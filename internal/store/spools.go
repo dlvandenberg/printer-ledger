@@ -10,14 +10,14 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain/unit"
 )
 
-const spoolQuery = `
+const spoolColumns = `
 SELECT s.id, s.filament_type, s.brand, s.color, s.initial_centigrams, s.tare_centigrams,
-       s.purchase_cost_cents, s.purchase_date
+       s.purchase_cost_cents, s.purchase_date`
+
+const spoolQuery = spoolColumns + `
 FROM spools s`
 
-const spoolLedgerQuery = `
-SELECT s.id, s.filament_type, s.brand, s.color, s.initial_centigrams, s.tare_centigrams,
-       s.purchase_cost_cents, s.purchase_date,
+const spoolLedgerQuery = spoolColumns + `,
        COALESCE((SELECT SUM(u.centigrams) FROM filament_usages u WHERE u.spool_id = s.id), 0) AS used_centigrams,
        COALESCE((SELECT SUM(a.delta_centigrams) FROM spool_adjustments a WHERE a.spool_id = s.id), 0) AS adjusted_centigrams
 FROM spools s`
@@ -103,7 +103,7 @@ func (s *Store) Spools(ctx context.Context) ([]domain.Spool, error) {
 	//nolint:errcheck
 	defer rows.Close()
 
-	var spools []domain.Spool
+	spools := []domain.Spool{}
 	for rows.Next() {
 		spool, err := scanSpool(rows)
 		if err != nil {

@@ -9,14 +9,14 @@ import (
 	"github.com/dlvandenberg/printer-ledger/internal/domain"
 )
 
-const designQuery = `
+const designColumns = `
 SELECT d.id, d.name, d.default_filament_type, d.estimated_centigrams, d.estimated_minutes,
-       d.margin_hundredths
+       d.margin_hundredths`
+
+const designQuery = designColumns + `
 FROM designs d`
 
-const designLedgerQuery = `
-SELECT d.id, d.name, d.default_filament_type, d.estimated_centigrams, d.estimated_minutes,
-       d.margin_hundredths,
+const designLedgerQuery = designColumns + `,
        (SELECT COUNT(*) FROM prints p WHERE p.design_id = d.id) AS print_count
 FROM designs d`
 
@@ -101,7 +101,7 @@ func (s *Store) Designs(ctx context.Context) ([]domain.Design, error) {
 	//nolint:errcheck
 	defer rows.Close()
 
-	var designs []domain.Design
+	designs := []domain.Design{}
 	for rows.Next() {
 		design, err := scanDesign(rows)
 		if err != nil {
